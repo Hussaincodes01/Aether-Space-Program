@@ -22,9 +22,11 @@ import {
   length as vecLength,
   maybeRebase,
 } from "@aether/coordinates";
-import { buildScene } from "./scene.js";
+import { envelopeWidth } from "@aether/missions";
+import { applyEvidence, buildScene } from "./scene.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
+import { createMissionPanel } from "./mission-panel.js";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
@@ -60,6 +62,19 @@ const camera = createCamera(scene.system, { x: AU, y: 0, z: 0.2 * AU });
 
 const controls = createControls(canvas);
 renderWatermark();
+
+// Mission selection drives what the app may claim, and therefore how speculative the world
+// looks. Applied once at startup and again on every change.
+const missionPanel = createMissionPanel("today");
+document.body.appendChild(missionPanel.element);
+
+let currentEnvelopeWidth = envelopeWidth(missionPanel.getProfile());
+applyEvidence(scene, currentEnvelopeWidth);
+
+missionPanel.onChange((profile) => {
+  currentEnvelopeWidth = envelopeWidth(profile);
+  applyEvidence(scene, currentEnvelopeWidth);
+});
 
 const relative = new THREE.Vector3();
 let lastTime = performance.now();
@@ -99,6 +114,8 @@ function frame(now: number): void {
     const rel = cameraRelative(camera, body.frame);
     body.mesh.position.set(rel.x, rel.y, rel.z);
   }
+  // The speculation shell tracks the planet it wraps.
+  scene.speculationShell.position.copy(scene.planet.mesh.position);
 
   // The light sits at the star, camera-relative like everything else.
   const starRel = cameraRelative(camera, scene.star.frame);
@@ -122,6 +139,7 @@ function frame(now: number): void {
     fps: smoothedFps,
     localPositionMagnitudeM: vecLength(camera.position),
     rebasedThisFrame: rebased,
+    speculationFraction: currentEnvelopeWidth,
   });
 
   requestAnimationFrame(frame);

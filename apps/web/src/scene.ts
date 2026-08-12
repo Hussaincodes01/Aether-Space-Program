@@ -40,6 +40,8 @@ export interface Scene {
   star: Body;
   planet: Body;
   starLight: THREE.PointLight;
+  /** Amber rim whose strength tracks how much of the world is inferred rather than measured. */
+  speculationShell: THREE.Mesh;
 }
 
 /** TRAPPIST-1 and TRAPPIST-1 e, from the published parameters the ingest will supply in P1. */
@@ -119,6 +121,25 @@ export function buildScene(): Scene {
     emissive: false,
   };
 
+  // ── Speculation shimmer ───────────────────────────────────────────────────────────────
+  // The PRD's most distinctive UI idea, wired to the evidence model rather than to a
+  // hand-set number: the less the selected missions constrain, the more strongly the
+  // planet is rimmed in amber. A world drawn from three parameters should *look* like a
+  // world drawn from three parameters.
+  const speculationShell = makeSphere(
+    TRAPPIST_1.planetRadiusM * 1.02,
+    new THREE.MeshBasicMaterial({
+      color: 0xffb454,
+      transparent: true,
+      opacity: 0,
+      side: THREE.BackSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+    64,
+  );
+  three.add(speculationShell);
+
   // ── Lighting ──────────────────────────────────────────────────────────────────────────
   // Physically scaled: an M-dwarf world is genuinely dim, and cheating that would throw
   // away one of the few things the data tells us directly.
@@ -126,7 +147,35 @@ export function buildScene(): Scene {
   three.add(starLight);
   three.add(new THREE.AmbientLight(starColour, 0.02));
 
-  return { three, universe, system, bodies: [star, planet], star, planet, starLight };
+  return {
+    three,
+    universe,
+    system,
+    bodies: [star, planet],
+    star,
+    planet,
+    starLight,
+    speculationShell,
+  };
+}
+
+/**
+ * Apply an evidence profile to the scene.
+ *
+ * Two visible consequences, both honest: the amber rim strengthens as the envelope widens,
+ * and the surface desaturates toward a neutral grey when there is little to constrain its
+ * composition — because a confident colour would be a claim we cannot support.
+ */
+export function applyEvidence(scene: Scene, envelopeWidth: number): void {
+  const shell = scene.speculationShell.material as THREE.MeshBasicMaterial;
+  shell.opacity = Math.min(0.5, envelopeWidth * 0.5);
+
+  const surface = scene.planet.mesh.material as THREE.MeshStandardMaterial;
+  const constrained = 1 - envelopeWidth;
+  // Interpolate between a neutral unknown grey and a mineral-plausible tone.
+  const grey = new THREE.Color(0x6a6a6a);
+  const mineral = new THREE.Color(0x8a7358);
+  surface.color.copy(grey).lerp(mineral, constrained);
 }
 
 /** Altitude above the planet's surface, metres. Negative means below it. */

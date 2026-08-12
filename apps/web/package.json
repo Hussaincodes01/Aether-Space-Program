@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@aether/coordinates": "workspace:*",
+    "@aether/missions": "workspace:*",
     "@aether/physics": "workspace:*",
     "@aether/schema": "workspace:*",
     "@aether/terrain": "workspace:*",
