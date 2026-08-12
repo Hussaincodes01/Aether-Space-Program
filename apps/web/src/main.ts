@@ -23,7 +23,14 @@ import {
   maybeRebase,
 } from "@aether/coordinates";
 import { envelopeWidth } from "@aether/missions";
-import { applyEvidence, buildScene } from "./scene.js";
+import {
+  applyEvidence,
+  buildScene,
+  refinementOptions,
+  replaceTerrain,
+  DEFAULT_TERRAIN_EXAGGERATION,
+} from "./scene.js";
+import { createTerrainBuilder } from "./planet-mesh.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
 import { createMissionPanel } from "./mission-panel.js";
@@ -75,6 +82,26 @@ missionPanel.onChange((profile) => {
   currentEnvelopeWidth = envelopeWidth(profile);
   applyEvidence(scene, currentEnvelopeWidth);
 });
+
+// Refine the coarse startup mesh in a worker. The scene is interactive throughout — the
+// planet simply sharpens a moment after it appears, rather than the tab freezing for a
+// second before anything is drawn.
+const terrainBuilder = createTerrainBuilder();
+let refining = true;
+
+terrainBuilder
+  .build(refinementOptions(scene, 6, DEFAULT_TERRAIN_EXAGGERATION))
+  .then((refined) => {
+    replaceTerrain(scene, refined);
+    applyEvidence(scene, currentEnvelopeWidth);
+  })
+  .catch((error: unknown) => {
+    // A failed refinement is not fatal — the coarse mesh is still a valid world.
+    console.warn("Terrain refinement failed; keeping the coarse mesh.", error);
+  })
+  .finally(() => {
+    refining = false;
+  });
 
 const relative = new THREE.Vector3();
 let lastTime = performance.now();
@@ -153,6 +180,8 @@ function frame(now: number): void {
     speculationFraction: currentEnvelopeWidth,
     terrainExaggeration: scene.terrain.exaggeration,
     reliefM: scene.terrain.reliefM.maxM - scene.terrain.reliefM.minM,
+    vertexCount: scene.terrain.vertexCount,
+    refining,
   });
 
   requestAnimationFrame(frame);

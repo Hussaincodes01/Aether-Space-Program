@@ -44,6 +44,9 @@ export interface HudData {
   terrainExaggeration: number;
   /** True peak-to-trough relief, metres, before exaggeration. */
   reliefM: number;
+  vertexCount: number;
+  /** True while the worker is building the detailed mesh. */
+  refining: boolean;
 }
 
 const row = (key: string, value: string, cls = "v"): string =>
@@ -75,6 +78,13 @@ export function renderHud(data: HudData): void {
       "terrain scale",
       data.terrainExaggeration === 1 ? "1x (true)" : `${data.terrainExaggeration.toFixed(0)}x`,
       data.terrainExaggeration === 1 ? "ok" : "warn",
+    ),
+    row(
+      "mesh",
+      data.refining
+        ? `${data.vertexCount.toLocaleString()} verts — refining`
+        : `${data.vertexCount.toLocaleString()} verts`,
+      data.refining ? "warn" : "ok",
     ),
     data.rebasedThisFrame ? row("", "rebased", "ok") : "",
   ].join("");

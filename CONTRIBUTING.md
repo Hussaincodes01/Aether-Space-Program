@@ -171,6 +171,26 @@ Match the surrounding code. Beyond that:
 
 ---
 
+## Discord notifications
+
+Every push to `main` posts a build result to Discord — commit subject, pass/fail, test
+count, and a link to the run.
+
+To enable it on a fork, or if it stops working:
+
+1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**. Pick the
+   channel and copy the URL.
+2. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**, named
+   `DISCORD_WEBHOOK`, with that URL as the value.
+
+Without the secret the job logs a note and exits cleanly. A missing notification must never
+fail a build, and the workflow is written so it cannot.
+
+The payload is assembled with `jq` rather than string interpolation, so a commit message
+containing quotes, newlines or backslashes cannot break the JSON or inject fields.
+
+---
+
 ## Pull requests
 
 1. Branch from `main`.

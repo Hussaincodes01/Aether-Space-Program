@@ -96,36 +96,77 @@ export function createMissionPanel(initial: MissionPresetId = "today"): MissionP
 
       <div class="evidence">
         <div class="meter"><div class="fill" style="width:${pct}%"></div></div>
-        <div class="row"><span class="k">parameter coverage</span><span class="v">${pct}%</span></div>
-        <div class="row"><span class="k">surface speculation</span><span class="v warn">${speculation}%</span></div>
+        <div class="row"><span class="k">parameter coverage</span><span class="v" data-field="coverage">${pct}%</span></div>
+        <div class="row"><span class="k">surface speculation</span><span class="v warn" data-field="speculation">${speculation}%</span></div>
         <p class="desc">${describeEvidence(profile)}</p>
-        ${
-          projected
-            ? `<p class="projected">Includes missions that have not launched. Anything derived from them is a projection, not data.</p>`
-            : ""
-        }
+        <p class="projected" style="display:${projected ? "block" : "none"}">Includes missions that have not launched. Anything derived from them is a projection, not data.</p>
       </div>
 
       ${groups}
     `;
 
-    for (const box of element.querySelectorAll<HTMLInputElement>("input[data-mission]")) {
-      box.addEventListener("change", () => {
-        const next = new Set(selection.selected);
-        if (box.checked) next.add(box.dataset.mission!);
-        else next.delete(box.dataset.mission!);
-        selection = createSelection(next);
-        render();
-        emit();
-      });
-    }
+    // One delegated listener on the container rather than one per control. Rebuilding
+    // ~14 checkboxes and their listeners on every click caused a visible hitch, and it
+    // also stole focus mid-interaction.
+    element.addEventListener("change", onChange);
+    element.addEventListener("click", onClick);
+  };
 
-    for (const button of element.querySelectorAll<HTMLButtonElement>("button[data-preset]")) {
-      button.addEventListener("click", () => {
-        selection = presetSelection(button.dataset.preset as MissionPresetId);
-        render();
-        emit();
-      });
+  const onChange = (event: Event): void => {
+    const box = event.target as HTMLInputElement;
+    if (!box.dataset?.mission) return;
+    const next = new Set(selection.selected);
+    if (box.checked) next.add(box.dataset.mission);
+    else next.delete(box.dataset.mission);
+    selection = createSelection(next);
+    updateEvidence();
+    emit();
+  };
+
+  const onClick = (event: Event): void => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-preset]");
+    if (!button?.dataset.preset) return;
+    selection = presetSelection(button.dataset.preset as MissionPresetId);
+    syncCheckboxes();
+    updateEvidence();
+    emit();
+  };
+
+  /** Reflect the current selection onto the existing checkboxes, without rebuilding them. */
+  const syncCheckboxes = (): void => {
+    for (const box of element.querySelectorAll<HTMLInputElement>("input[data-mission]")) {
+      const id = box.dataset.mission;
+      if (id) box.checked = selection.selected.has(id);
+    }
+  };
+
+  /**
+   * Update only the evidence readout.
+   *
+   * The mission list is static once built, so touching just this subtree keeps toggling a
+   * checkbox cheap and leaves scroll position and focus alone.
+   */
+  const updateEvidence = (): void => {
+    const profile = buildEvidenceProfile(selection);
+    const width = envelopeWidth(profile);
+    const pct = Math.round(profile.completeness * 100);
+    const speculation = Math.round(width * 100);
+
+    const fill = element.querySelector<HTMLElement>(".meter .fill");
+    if (fill) fill.style.width = `${pct}%`;
+
+    const coverage = element.querySelector<HTMLElement>("[data-field='coverage']");
+    if (coverage) coverage.textContent = `${pct}%`;
+
+    const speculationEl = element.querySelector<HTMLElement>("[data-field='speculation']");
+    if (speculationEl) speculationEl.textContent = `${speculation}%`;
+
+    const desc = element.querySelector<HTMLElement>(".desc");
+    if (desc) desc.textContent = describeEvidence(profile);
+
+    const projected = element.querySelector<HTMLElement>(".projected");
+    if (projected) {
+      projected.style.display = includesPlannedMission(selection) ? "block" : "none";
     }
   };
 

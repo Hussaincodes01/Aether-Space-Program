@@ -34,8 +34,19 @@ export function createControls(canvas: HTMLCanvasElement): {
 
   // Yaw/pitch tracked separately and recomposed each frame — accumulating into a quaternion
   // drifts and eventually rolls the horizon.
+  //
+  // Two sets: `target*` receives raw mouse input, `current*` chases it. The gap is what
+  // turns a stepped, jittery pointer signal into a continuous camera. Mouse events arrive
+  // at the device's polling rate, not the frame rate, so applying them directly makes the
+  // view stutter on any frame that happens to receive two events or none.
+  let targetYaw = 0;
+  let targetPitch = 0;
   let yaw = 0;
   let pitch = 0;
+
+  // Velocity is integrated rather than set, so movement eases in and out instead of
+  // snapping between full speed and dead stop on keypress.
+  const velocity = new THREE.Vector3();
 
   const onKeyDown = (e: KeyboardEvent): void => {
     pressed.add(e.code);
@@ -47,11 +58,11 @@ export function createControls(canvas: HTMLCanvasElement): {
   const onMouseMove = (e: MouseEvent): void => {
     if (!state.pointerLocked) return;
     const sensitivity = 0.0022;
-    yaw -= e.movementX * sensitivity;
-    pitch -= e.movementY * sensitivity;
+    targetYaw -= e.movementX * sensitivity;
+    targetPitch -= e.movementY * sensitivity;
     // Clamp just short of vertical; exactly vertical loses the yaw reference.
     const limit = Math.PI / 2 - 0.001;
-    pitch = Math.min(Math.max(pitch, -limit), limit);
+    targetPitch = Math.min(Math.max(targetPitch, -limit), limit);
   };
 
   const onWheel = (e: WheelEvent): void => {
@@ -107,12 +118,29 @@ export function createControls(canvas: HTMLCanvasElement): {
   const up = new THREE.Vector3(0, 1, 0);
   const move = new THREE.Vector3();
 
+  /**
+   * Frame-rate-independent exponential smoothing.
+   *
+   * A naive `value += (target - value) * 0.1` is tied to frame rate: the same code feels
+   * sluggish at 30 fps and twitchy at 144. Expressing it as a half-life makes the response
+   * identical at any frame rate, which is what stops the camera feeling different on
+   * different machines.
+   */
+  const smooth = (current: number, target: number, halfLifeSeconds: number, dt: number): number => {
+    const k = 1 - Math.pow(2, -dt / halfLifeSeconds);
+    return current + (target - current) * k;
+  };
+
   const update = (
     camera: CameraState,
     threeCamera: THREE.Camera,
     altitudeM: number,
     dt: number,
   ): void => {
+    // Chase the raw pointer target. ~28 ms half-life is short enough to feel direct and
+    // long enough to absorb polling jitter.
+    yaw = smooth(yaw, targetYaw, 0.028, dt);
+    pitch = smooth(pitch, targetPitch, 0.028, dt);
     threeCamera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, "YXZ"));
 
     forward.set(0, 0, -1).applyQuaternion(threeCamera.quaternion);
@@ -126,20 +154,32 @@ export function createControls(canvas: HTMLCanvasElement): {
     if (pressed.has(KEY_BINDINGS.up)) move.add(up);
     if (pressed.has(KEY_BINDINGS.down)) move.sub(up);
 
-    if (move.lengthSq() === 0) return;
-    move.normalize();
-
-    // Speed proportional to altitude: walking pace at the surface, interplanetary in
-    // space. Without this the camera either crawls across a system or overshoots a planet
-    // between two frames.
+    // Speed proportional to altitude: walking pace at the surface, interplanetary in space.
+    // Without this the camera either crawls across a system or overshoots a planet between
+    // two frames.
     const boost = pressed.has(KEY_BINDINGS.boost) ? 8 : 1;
-    const speed = scaleAwareSpeed(altitudeM) * state.throttle * boost;
-    const step = speed * dt;
+    const targetSpeed = scaleAwareSpeed(altitudeM) * state.throttle * boost;
+
+    if (move.lengthSq() > 0) move.normalize();
+
+    // Ease toward the target velocity. Acceleration is quicker than braking so the camera
+    // responds immediately but still coasts to a stop rather than stopping dead.
+    const accelerating = move.lengthSq() > 0;
+    velocity.x = smooth(velocity.x, move.x * targetSpeed, accelerating ? 0.09 : 0.16, dt);
+    velocity.y = smooth(velocity.y, move.y * targetSpeed, accelerating ? 0.09 : 0.16, dt);
+    velocity.z = smooth(velocity.z, move.z * targetSpeed, accelerating ? 0.09 : 0.16, dt);
+
+    // Below a millimetre per second, snap to rest — otherwise the exponential tail leaves
+    // the camera drifting imperceptibly forever, which shows up as jitter in the HUD.
+    if (velocity.lengthSq() < 1e-6) {
+      velocity.set(0, 0, 0);
+      return;
+    }
 
     // The f64 position is the authority. Three.js never learns where the camera is.
-    camera.position.x += move.x * step;
-    camera.position.y += move.y * step;
-    camera.position.z += move.z * step;
+    camera.position.x += velocity.x * dt;
+    camera.position.y += velocity.y * dt;
+    camera.position.z += velocity.z * dt;
   };
 
   const dispose = (): void => {

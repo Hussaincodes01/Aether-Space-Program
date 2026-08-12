@@ -209,7 +209,11 @@ Working today:
 - ✅ Rayleigh/Mie atmospheric scattering, coefficients derived from mean molecular weight
 - ✅ Star field with a realistic luminosity function and true blackbody colours
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
-- ✅ **121 tests**, including the two merge gates the PRD requires
+- ✅ Off-thread terrain generation with progressive refinement — a coarse world appears in
+  ~20 ms, then sharpens to ~41k vertices without the tab ever freezing
+- ✅ Frame-rate-independent camera damping and look smoothing
+- ✅ **124 tests**, including the two merge gates the PRD requires and cost guards on
+  terrain evaluation
 
 Not built yet: real archive ingestion, chunked LOD for close approach, retrieval ML, the
 hypothesis ensemble UI, and the game layer. See the PRD for sequencing.

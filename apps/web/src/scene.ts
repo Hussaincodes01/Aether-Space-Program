@@ -23,7 +23,11 @@ import {
   vec3,
   type Frame,
 } from "@aether/coordinates";
-import { buildPlanetGeometry, type PlanetMeshResult } from "./planet-mesh.js";
+import {
+  buildPlanetGeometry,
+  type PlanetMeshOptions,
+  type PlanetMeshResult,
+} from "./planet-mesh.js";
 import { createAtmosphere, scaleHeight, type AtmosphereShell } from "./atmosphere.js";
 import { createStarfield } from "./starfield.js";
 
@@ -65,6 +69,9 @@ const TRAPPIST_1 = {
  * Aether just says by how much, in the HUD, and lets you set it to 1 to see the truth.
  */
 export const DEFAULT_TERRAIN_EXAGGERATION = 45;
+
+/** Stable seed for the world. Changing it changes the planet — see PRD §13.1. */
+export const PLANET_SEED = "sha256:trappist-1e:v1";
 
 function makeSphere(radiusM: number, material: THREE.Material, segments: number): THREE.Mesh {
   const geometry = new THREE.SphereGeometry(1, segments, segments / 2);
@@ -119,10 +126,12 @@ export function buildScene(
   const planetFrame = createFrame("planet:TRAPPIST-1 e", context.radiusM);
   attach(planetFrame, system, vec3(TRAPPIST_1.planetSemimajorAxisM, 0, 0));
 
+  // Build a coarse mesh synchronously so something is on screen in ~20 ms, then let the
+  // worker refine it. Progressive detail beats a blank screen and a frozen tab.
   const terrain = buildPlanetGeometry({
     context,
-    seed: "sha256:trappist-1e:v1",
-    subdivisions: 5,
+    seed: PLANET_SEED,
+    subdivisions: 3,
     terrainExaggeration,
   });
 
@@ -201,6 +210,34 @@ export function buildScene(
     speculationShell,
     terrain,
     context,
+  };
+}
+
+/**
+ * Swap in a higher-resolution mesh once the worker has built it.
+ *
+ * The old geometry is disposed explicitly: Three does not free GPU buffers on garbage
+ * collection, and leaking one on every refinement would climb steadily as the user changes
+ * settings.
+ */
+export function replaceTerrain(scene: Scene, refined: PlanetMeshResult): void {
+  const previous = scene.planet.mesh.geometry;
+  scene.planet.mesh.geometry = refined.geometry;
+  previous.dispose();
+  scene.terrain = refined;
+}
+
+/** Options for refining this scene's planet, so callers do not restate the context. */
+export function refinementOptions(
+  scene: Scene,
+  subdivisions: number,
+  terrainExaggeration: number,
+): PlanetMeshOptions {
+  return {
+    context: scene.context,
+    seed: PLANET_SEED,
+    subdivisions,
+    terrainExaggeration,
   };
 }
 
