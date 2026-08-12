@@ -23,6 +23,9 @@ importers:
       '@aether/coordinates':
         specifier: workspace:*
         version: link:../../packages/coordinates
+      '@aether/missions':
+        specifier: workspace:*
+        version: link:../../packages/missions
       '@aether/physics':
         specifier: workspace:*
         version: link:../../packages/physics
@@ -47,6 +50,12 @@ importers:
         version: 6.4.3(@types/node@22.20.1)
 
   packages/coordinates:
+    dependencies:
+      '@aether/units':
+        specifier: workspace:*
+        version: link:../units
+
+  packages/missions:
     dependencies:
       '@aether/units':
         specifier: workspace:*

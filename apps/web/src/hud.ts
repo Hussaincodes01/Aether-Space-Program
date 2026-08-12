@@ -38,6 +38,8 @@ export interface HudData {
   fps: number;
   localPositionMagnitudeM: number;
   rebasedThisFrame: boolean;
+  /** 0..1 — how much of the rendered world is inferred rather than measured. */
+  speculationFraction: number;
 }
 
 const row = (key: string, value: string, cls = "v"): string =>
@@ -62,6 +64,7 @@ export function renderHud(data: HudData): void {
     row("speed", formatSpeed(data.speedMs)),
     row("throttle", `${data.throttle.toFixed(3)}x`),
     row("fps", data.fps.toFixed(0), data.fps >= 55 ? "ok" : "warn"),
+    row("speculation", `${(data.speculationFraction * 100).toFixed(0)}%`, "warn"),
     data.rebasedThisFrame ? row("", "rebased", "ok") : "",
   ].join("");
 }

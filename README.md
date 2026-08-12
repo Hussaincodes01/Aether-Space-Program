@@ -16,6 +16,7 @@ apps/
 
 packages/
   terrain/        Terrain operators + physics admissibility gates + program compilation
+  missions/       Mission registry + the evidence model (what each mission can constrain)
   physics/        Formula registry + deterministic derivations with full provenance
   schema/         The contract: Science / Inference / Visual layers, LLM containment
   coordinates/    f64 nested reference frames, floating-origin camera, depth partitioning
@@ -25,6 +26,7 @@ packages/
 ```
 web ──► terrain ──► physics ──► units
  │         └──────► schema ───► units
+ ├──────► missions ───────────► units
  └──────► coordinates ────────► units
 ```
 
@@ -88,6 +90,23 @@ export const periglacial = defineOperator({
 
 Export it from `operators/index.ts`. The compiler will gate it, clamp its parameters, and
 include it in the catalog diversity fingerprint automatically.
+
+### Add a mission
+
+Create `packages/missions/src/missions/<name>.ts` with `defineMission({...})`, declaring
+its instruments and — the part that matters — what it `constrains`. Export it from
+`missions/index.ts`. The selector UI, the presets validator and the evidence model all pick
+it up with no further changes.
+
+Mission selection is **not** a catalog filter. The selected set determines which parameters
+are constrained at all; the rest stay `null` in `ScienceSpec` and must come from the
+inference resolver, which widens the hypothesis envelope, which makes the rendered world
+visibly more speculative. Select TESS alone and you have a radius ratio and a period — the
+surface is a guess and the amber rim says so. Add Gaia for a real radius, radial velocity
+for a mass and density, JWST for an atmosphere, and the world tightens.
+
+Quality combines as the **best** across missions, never the sum: ticking more boxes must
+not manufacture confidence.
 
 ### Add a missing-value strategy
 
