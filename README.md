@@ -1,14 +1,114 @@
+<div align="center">
+
 # Aether
 
-Distance-accurate exoplanet visualization with AI-constrained surface generation.
+**A distance-accurate exoplanet explorer where every pixel can name its evidence.**
 
-See [`../PRD.md`](../PRD.md) for the full specification.
+Fly from one astronomical unit to a two-metre observer height on a real exoplanet — with
+correct positions, real stellar colours, and an honest label on everything that is inferred
+rather than measured.
 
-## Structure
+<img src="docs/assets/trappist-1-lineup.jpg" alt="Artist concepts of the seven TRAPPIST-1 planets in a row" width="88%">
 
-Each package is a building block with one responsibility and no circular dependencies.
-Dependencies point strictly downward, so any layer can be replaced without touching the
-ones below it.
+<sub><i>The TRAPPIST-1 planets. Artist concepts — nobody has ever resolved an exoplanet surface,
+and that fact is the whole design problem. NASA/JPL-Caltech, public domain.</i></sub>
+
+</div>
+
+---
+
+## What this is
+
+Three kinds of exoplanet software exist, and none of them do what Aether does.
+
+| | Strength | Limitation |
+|---|---|---|
+| **Catalogs** — NASA Exoplanet Archive, ExoFOP | Authoritative | Tables. No sense of place. |
+| **Visualizers** — OpenSpace, Gaia Sky, NASA Eyes | Correct orbits | Planets are spheres. You cannot land. |
+| **Space games** — No Man's Sky, Elite, KSP | Immersion, agency | Entirely invented. Zero traceability. |
+
+Aether occupies the empty quadrant: **immersive and auditable at the same time.**
+
+### The claim we make, and the one we refuse
+
+For almost every exoplanet there is no spatially resolved surface observation. Transmission
+spectra constrain atmospheres, not geography. Mass and radius constrain a *class* of
+interior, not a coastline.
+
+So Aether does **not** claim to reconstruct a planet's true surface. It claims this instead:
+
+> Aether generates deterministic, physically admissible surface hypotheses conditioned on
+> measured system data, retrieval posteriors, interior models, and Solar System analog data.
+> Every visible feature is labelled by evidence class and confidence.
+
+The word *accurate* is reserved for orbits, distances and unit conversions. Generated
+geography is **scientifically constrained**, never *accurate* and never *predicted*.
+
+---
+
+## The central idea: the planet becomes more certain as you observe it
+
+<img src="docs/assets/trappist-1f-surface.jpg" alt="Artist concept of the surface of TRAPPIST-1f" width="100%">
+
+<sub><i>What standing on TRAPPIST-1f might look like. "Might" is doing all the work in that
+sentence, and Aether is built to keep saying so. NASA/JPL-Caltech, public domain.</i></sub>
+
+Pick a planet with three measured parameters and the hypothesis envelope is wide: the
+surface is a guess, and it is drawn with a strong amber speculation rim to say so. Then add
+evidence:
+
+| Add | And you gain |
+|---|---|
+| **Gaia** | A stellar distance, so the transit depth becomes a real radius |
+| **Radial velocity** | A mass, therefore density and surface gravity |
+| **JWST** | An atmosphere, so the sky colour is derived rather than assumed |
+
+The envelope narrows, hypotheses are eliminated, the world re-composes, and the amber rim
+recedes. The discovery loop, the terrain generator, the provenance system and the
+uncertainty machinery are not four features — they are one mechanic.
+
+---
+
+## Missions as evidence, not filters
+
+<img src="docs/assets/mission-timeline.svg" alt="Timeline of exoplanet missions from 1990 to 2045" width="100%">
+
+Aether models **fourteen missions**. Each declares its instruments, wavelength coverage, and
+— the part that matters — exactly which physical parameters its data can constrain.
+
+Selecting missions is a scientific act. Choose TESS alone and you have a radius ratio and a
+period; parameter coverage sits under 25% and the surface is mostly invention. Choose
+"everything flying today" and it climbs past 70%.
+
+Two rules keep this honest:
+
+- **Quality is the best across missions, never the sum.** Ticking more boxes cannot
+  manufacture confidence.
+- **The envelope never fully closes.** Even with every mission selected it bottoms out at
+  15%, because no exoplanet surface has ever been resolved. That floor is not pessimism.
+
+The Habitable Worlds Observatory is the only mission that constrains a surface at all — and
+even then only weakly, because published work finds ocean and sand nearly indistinguishable
+from 0.4–1.8 µm, with a severe degeneracy between planetary radius and surface albedo.
+
+---
+
+## Host stars, at their real colours
+
+<img src="docs/assets/hr-diagram.svg" alt="Hertzsprung-Russell diagram of the catalog host stars" width="100%">
+
+Every marker is filled with its star's true blackbody colour, computed by the same
+`stellarColor()` function that lights the 3D scene. TRAPPIST-1 at 2566 K really is that
+orange, and a world lit by it looks nothing like a world lit by the Sun. We do not correct
+for it — an M-dwarf world is genuinely dim, and that is a teaching moment, not a bug.
+
+---
+
+## Architecture
+
+Every package is a building block with one responsibility and no circular dependencies.
+Dependencies point strictly downward, so any layer can be replaced without touching the ones
+beneath it.
 
 ```
 apps/
@@ -16,7 +116,7 @@ apps/
 
 packages/
   terrain/        Terrain operators + physics admissibility gates + program compilation
-  missions/       Mission registry + the evidence model (what each mission can constrain)
+  missions/       Mission registry + the evidence model
   physics/        Formula registry + deterministic derivations with full provenance
   schema/         The contract: Science / Inference / Visual layers, LLM containment
   coordinates/    f64 nested reference frames, floating-origin camera, depth partitioning
@@ -30,119 +130,117 @@ web ──► terrain ──► physics ──► units
  └──────► coordinates ────────► units
 ```
 
-**The renderer has already changed twice** (C++ → Babylon.js → Three.js) and the science
-layers required zero rework each time, because everything above `apps/` is written against
-the contract rather than against an engine. Hold that line.
+**The renderer has already changed twice** — C++/OpenGL → Babylon.js → Three.js — and the
+science layers needed zero rework each time, because everything above `apps/` is written
+against the contract rather than against an engine. That line is worth holding.
 
-## Extension points
-
-Three registries. Adding a feature means **adding one file** — never editing a switch
-statement or a dispatch table.
-
-### Add a physics formula
-
-Create `packages/physics/src/formulas/tidal-locking.ts`:
+### Three layers, three permission levels
 
 ```ts
-import { defineFormula } from "../registry.js";
-import { derived } from "../derived-value.js";
-
-export const tidalLockingTimescale = defineFormula<{ /* inputs */ }>({
-  id: "tidal_locking_timescale",     // appears in every provenance record — keep stable
-  name: "Tidal locking timescale",
-  latex: String.raw`\tau = \frac{4}{9}\frac{Q}{k_2}\ldots`,
-  description: "Time to despin to synchronous rotation.",
-  references: ["1977Icar...30..297P"],
-  unit: "s",
-  domain: (i) => (i.eccentricity < 1 ? null : "orbit must be bound"),
-  compute: (i) => derived({ /* … */ }),
-});
+interface PlanetModel {
+  science: ScienceSpec;       // ingestion + allowlisted physics      affects science: yes
+  inference: InferenceSpec;   // versioned models + prior resolver    affects science: yes, with uncertainty
+  visual: VisualSpec;         // composer, LLM, texture pipeline      affects science: NO
+}
 ```
 
-Then add `export * from "./tidal-locking.js";` to `formulas/index.ts`. It is now in the
-registry, renderable in the inspector, and covered by the registry tests.
+The LLM service holds no credential and no schema field that can reach `ScienceSpec`.
+Containment is structural, not a system prompt — and there is a test suite that proves it.
 
-### Add a terrain operator
+### The precision problem
 
-Create `packages/terrain/src/operators/periglacial.ts`:
+Standing on a planet 40 light-years away spans ~27 orders of magnitude. `float32` gives ~7
+significant digits and `float64` gives ~16, so no single linear coordinate system survives
+it: subtracting two huge, nearly-equal doubles annihilates the low bits.
 
-```ts
-import { defineOperator } from "../registry.js";
+Aether never forms the huge numbers. Every frame stores its position *relative to its
+parent*, and two frames are related by walking to their lowest common ancestor. A one-metre
+offset survives at 40 light-years to better than a nanometre — while the naive
+absolute-subtraction approach loses the metre entirely. Both are asserted in
+`packages/coordinates/src/precision.test.ts`.
 
-export const periglacial = defineOperator({
-  id: "periglacial",
-  name: "Periglacial patterning",
-  description: "Polygonal ground and thermokarst from repeated freeze-thaw.",
-  references: [],
-  layerOrder: 70,                    // runs after fluvial (60), before microdetail (100)
-  parameters: {
-    coverage: { min: 0, max: 1, default: 0.2, description: "Patterned-ground fraction." },
-  },
-  gate: (ctx) => ({
-    admissible: ctx.hasStableIce && ctx.surfaceTemperatureK > 150,
-    gatedBy: "equilibrium_temperature",   // must resolve in the physics registry
-    reason: "…",                          // shown verbatim in the inspector
-    intensityRange: [0.05, 0.6],
-    confidence: 0.3,
-  }),
-});
-```
+---
 
-Export it from `operators/index.ts`. The compiler will gate it, clamp its parameters, and
-include it in the catalog diversity fingerprint automatically.
-
-### Add a mission
-
-Create `packages/missions/src/missions/<name>.ts` with `defineMission({...})`, declaring
-its instruments and — the part that matters — what it `constrains`. Export it from
-`missions/index.ts`. The selector UI, the presets validator and the evidence model all pick
-it up with no further changes.
-
-Mission selection is **not** a catalog filter. The selected set determines which parameters
-are constrained at all; the rest stay `null` in `ScienceSpec` and must come from the
-inference resolver, which widens the hypothesis envelope, which makes the rendered world
-visibly more speculative. Select TESS alone and you have a radius ratio and a period — the
-surface is a guess and the amber rim says so. Add Gaia for a real radius, radial velocity
-for a mass and density, JWST for an atmosphere, and the world tightens.
-
-Quality combines as the **best** across missions, never the sum: ticking more boxes must
-not manufacture confidence.
-
-### Add a missing-value strategy
-
-Add a `ResolutionStrategy` to `DEFAULT_STRATEGIES` in `packages/schema/src/resolver.ts`.
-Order **is** the precedence rule from PRD §5.2, so inserting one is a spec change.
-
-## Two invariants the CI enforces
-
-- **LLM containment** (PRD §19.1) — an LLM payload carrying mass, radius, distance,
-  orbital or chemical values is rejected by schema *and* by a deep field scan, in any
-  naming convention, at any nesting depth. `packages/schema/src/llm-boundary.test.ts`.
-- **Catalog diversity** (PRD §9.5) — no two worlds may compile to near-duplicate terrain
-  programs. `packages/terrain/src/terrain.test.ts`.
-
-Both are merge gates, not advisory.
-
-## Commands
+## Quick start
 
 ```bash
+git clone https://github.com/Hussaincodes01/Aether-Space-Program.git
+cd Aether-Space-Program
 pnpm install
-pnpm check      # typecheck + test — what CI runs
-pnpm dev        # run the precision spike at localhost:5173
-pnpm build      # build all packages
+pnpm dev            # http://localhost:5173
 ```
 
-## Status — week 1–2, multi-scale precision spike
+Requires **Node 22+** and **pnpm 9+**.
 
-`pnpm dev` flies from 1 AU to a two-metre observer height above TRAPPIST-1 e. Untextured
-on purpose: per the PRD, prove the scale transition before any art exists, because art
-hides jitter.
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Run the client |
+| `pnpm check` | Typecheck + test — exactly what CI runs |
+| `pnpm test` | Tests only |
+| `pnpm build` | Build every package and the client |
 
-Watch the **local coords** readout. It stays small however far the camera is from the
-origin — that is the frame rebasing working. If it climbs past ~1e12 m, the f32 upload
-will start to visibly jitter and something has broken.
+**Controls:** `W A S D` move · `R` / `F` up and down · `Shift` boost · mouse wheel throttle ·
+`Esc` release the mouse.
 
-**Immediate follow-up (P0):** the spike uses Three's per-vertex logarithmic depth buffer,
-which interpolates incorrectly across large triangles. The production path is cascaded
-frusta with reversed-Z on WebGPU — `packages/coordinates/src/depth.ts` already provides
-the partitioning and matrices; they are not yet wired into the renderer.
+Watch the **local coords** readout in the HUD. It stays small no matter how far the camera
+is from the origin — that is frame rebasing doing its job. If it ever climbs past ~1e12 m,
+the f32 upload will start to jitter and something has broken.
+
+---
+
+## Status
+
+**Week 1–2 of the plan in [`docs/PRD.md`](docs/PRD.md): the multi-scale precision spike.**
+
+<img src="docs/assets/trappist-1-vs-solar.jpg" alt="The TRAPPIST-1 system compared to the inner Solar System" width="100%">
+
+<sub><i>All seven TRAPPIST-1 planets orbit closer than Mercury. NASA/JPL-Caltech, public domain.</i></sub>
+
+Working today:
+
+- ✅ f64 hierarchical frames, floating-origin camera, rebasing with hysteresis
+- ✅ Physics registry — equilibrium temperature, insolation, density, gravity, escape
+  velocity, scale height, Jeans parameter, Kopparapu habitable zone, blackbody colour
+- ✅ Three-layer contract with structurally enforced LLM containment
+- ✅ Terrain operator registry with physics admissibility gates
+- ✅ Mission registry and evidence model, wired to the rendered speculation rim
+- ✅ Three.js client flying 1 AU → surface
+- ✅ **102 tests**, including the two merge gates the PRD requires
+
+Not built yet: real archive ingestion, cube-sphere LOD terrain, atmospheric scattering,
+retrieval ML, the hypothesis ensemble UI, and the game layer. See the PRD for sequencing.
+
+**Known limitation, recorded rather than hidden:** the terrain operator set does not yet
+model the consequences of tidal locking, so Earth and TRAPPIST-1e compile to the most
+similar worlds in the catalog. There is a test pinning that distance so it cannot quietly
+drift downward. Adding a tidal-locking operator is the top item in the backlog.
+
+---
+
+## Contributing
+
+New contributors: start with **[CONTRIBUTING.md](CONTRIBUTING.md)**. It explains the three
+registries, how to add a feature by writing exactly one file, and the two invariants that
+must never break.
+
+The short version: adding a physics formula, a terrain operator or a mission means creating
+one file and adding one export line. No switch statements, no dispatch tables.
+
+---
+
+## Credits and licence
+
+Imagery is NASA/JPL-Caltech, public domain. The Hertzsprung–Russell diagram and the mission
+timeline are generated for this project.
+
+Scientific method draws on the NASA Exoplanet Archive, the MALBEC radiative-transfer
+intercomparison, the Kopparapu habitable-zone parameterisation, Zeng et al. mass–radius
+relations, and published work on surface degeneracies in reflected-light observations. Full
+citations are in [`docs/PRD.md`](docs/PRD.md).
+
+This project uses NASA data and imagery. It is **not** endorsed by or affiliated with NASA,
+ESA, or any space agency.
+
+> **Every export and screenshot carries this, burned into the framebuffer:**
+> *Data-grounded artistic reconstruction. Geography is procedurally generated and is not an
+> observation.*

@@ -1,14 +1,42 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build output
 dist/
+build/
 *.tsbuildinfo
 .vite/
 coverage/
-.env
-.env.local
-.DS_Store
 
-# Data + model artifacts live in object storage / DVC, never in git
+# Secrets and local config — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+
+# Python virtual environments (the ML and ingestion side)
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Data and model artifacts live in object storage or DVC, never in git
 data/snapshots/
 *.parquet
 *.pkl
 *.onnx
+*.h5
+*.npz
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp

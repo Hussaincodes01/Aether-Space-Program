@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" width="880" height="470" role="img" aria-label="Hertzsprung-Russell diagram of Aether catalog host stars">
+  <title>Host stars in the Aether catalog</title>
+  <desc>Luminosity against effective temperature. Marker colours are computed by the same blackbody-to-sRGB function the renderer uses to light each scene.</desc>
+
+  <rect width="880" height="470" fill="#070b14"/>
+
+  <!-- main sequence band -->
+  <polyline points="90,83 251,102 412,141 573,200 734,294 814,357"
+            fill="none" stroke="#5ea8ff" stroke-opacity="0.10" stroke-width="26" stroke-linecap="round"/>
+  <polyline points="90,83 251,102 412,141 573,200 734,294 814,357"
+            fill="none" stroke="#5ea8ff" stroke-opacity="0.22" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="600" y="182" fill="#5ea8ff" fill-opacity="0.5" font-family="ui-monospace,Menlo,monospace" font-size="11" transform="rotate(20 600 182)">main sequence</text>
+
+  <!-- axes -->
+  <line x1="90" y1="400" x2="850" y2="400" stroke="#2a3b57" stroke-width="1"/>
+  <line x1="90" y1="30"  x2="90"  y2="400" stroke="#2a3b57" stroke-width="1"/>
+
+  <!-- x ticks: effective temperature, hot on the left -->
+  <g font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#6f8ab5" text-anchor="middle">
+    <line x1="90"  y1="400" x2="90"  y2="405" stroke="#2a3b57"/><text x="90"  y="420">7000 K</text>
+    <line x1="251" y1="400" x2="251" y2="405" stroke="#2a3b57"/><text x="251" y="420">6000</text>
+    <line x1="412" y1="400" x2="412" y2="405" stroke="#2a3b57"/><text x="412" y="420">5000</text>
+    <line x1="573" y1="400" x2="573" y2="405" stroke="#2a3b57"/><text x="573" y="420">4000</text>
+    <line x1="734" y1="400" x2="734" y2="405" stroke="#2a3b57"/><text x="734" y="420">3000</text>
+    <text x="470" y="442" fill="#8ba4c9" font-size="12">stellar effective temperature (hotter to the left)</text>
+  </g>
+
+  <!-- y ticks: log luminosity -->
+  <g font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#6f8ab5" text-anchor="end">
+    <line x1="85" y1="40"  x2="90" y2="40"  stroke="#2a3b57"/><text x="78" y="44">10</text>
+    <line x1="85" y1="112" x2="90" y2="112" stroke="#2a3b57"/><text x="78" y="116">1</text>
+    <line x1="85" y1="184" x2="90" y2="184" stroke="#2a3b57"/><text x="78" y="188">0.1</text>
+    <line x1="85" y1="256" x2="90" y2="256" stroke="#2a3b57"/><text x="78" y="260">0.01</text>
+    <line x1="85" y1="328" x2="90" y2="328" stroke="#2a3b57"/><text x="78" y="332">1e-3</text>
+    <line x1="85" y1="400" x2="90" y2="400" stroke="#2a3b57"/><text x="78" y="404">1e-4</text>
+  </g>
+  <text x="26" y="220" fill="#8ba4c9" font-family="ui-monospace,Menlo,monospace" font-size="12" text-anchor="middle" transform="rotate(-90 26 220)">luminosity (L / L☉)</text>
+
+  <!-- gridlines -->
+  <g stroke="#5ea8ff" stroke-opacity="0.06">
+    <line x1="90" y1="40"  x2="850" y2="40"/>
+    <line x1="90" y1="112" x2="850" y2="112"/>
+    <line x1="90" y1="184" x2="850" y2="184"/>
+    <line x1="90" y1="256" x2="850" y2="256"/>
+    <line x1="90" y1="328" x2="850" y2="328"/>
+  </g>
+
+  <!-- stars. fill = blackbody colour at that Teff, from stellarColor() in @aether/physics -->
+  <g font-family="ui-monospace,Menlo,monospace" font-size="11">
+    <circle cx="177" cy="85"  r="7" fill="#fff8fd"/><text x="191" y="89"  fill="#d8e8ff">WASP-121 · 6460 K</text>
+    <circle cx="288" cy="112" r="8" fill="#fff1ea" stroke="#5ea8ff" stroke-width="1.5"/><text x="302" y="116" fill="#9fc4f5">Sun · 5772 K (reference)</text>
+    <circle cx="359" cy="132" r="6" fill="#ffebdb"/><text x="373" y="136" fill="#d8e8ff">WASP-39</text>
+    <circle cx="384" cy="129" r="6" fill="#ffe9d6"/><text x="398" y="121" fill="#d8e8ff">55 Cancri A</text>
+    <circle cx="432" cy="146" r="6" fill="#ffe4cb"/><text x="446" y="150" fill="#d8e8ff">HD 189733</text>
+    <circle cx="607" cy="212" r="6" fill="#ffce9b"/><text x="621" y="216" fill="#d8e8ff">Kepler-186</text>
+    <circle cx="656" cy="230" r="6" fill="#ffc68a"/><text x="670" y="234" fill="#d8e8ff">TOI-700</text>
+    <circle cx="693" cy="285" r="6" fill="#ffc07d"/><text x="613" y="277" fill="#d8e8ff" text-anchor="end">GJ 1214</text>
+    <circle cx="728" cy="298" r="6" fill="#ffb970"/><text x="742" y="296" fill="#d8e8ff">LHS 3844</text>
+    <circle cx="727" cy="311" r="6" fill="#ffb970"/><text x="741" y="322" fill="#d8e8ff">Proxima Cen</text>
+    <circle cx="803" cy="347" r="8" fill="#ffa74f" stroke="#ffb454" stroke-width="1.5"/><text x="795" y="368" fill="#ffd9a8" text-anchor="end">TRAPPIST-1 · 2566 K</text>
+  </g>
+
+  <!-- caption -->
+  <text x="90" y="462" fill="#56709a" font-family="ui-monospace,Menlo,monospace" font-size="11">
+    Marker colour is the star's true blackbody colour, computed by the same function that lights the 3D scene.
+  </text>
+</svg>
