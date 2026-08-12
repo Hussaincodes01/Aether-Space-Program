@@ -59,14 +59,36 @@ export function createControls(canvas: HTMLCanvasElement): {
     state.throttle = Math.min(Math.max(state.throttle * (e.deltaY > 0 ? 0.8 : 1.25), 0.001), 1000);
   };
 
+  const overlay = document.getElementById("click-to-start");
+  const overlayMessage = overlay?.querySelector("span");
+
+  const setOverlay = (visible: boolean, message?: string): void => {
+    if (!overlay) return;
+    overlay.style.display = visible ? "grid" : "none";
+    if (overlayMessage && message) overlayMessage.textContent = message;
+  };
+
   const onPointerLockChange = (): void => {
     state.pointerLocked = document.pointerLockElement === canvas;
-    const overlay = document.getElementById("click-to-start");
-    if (overlay) overlay.style.display = state.pointerLocked ? "none" : "grid";
+    setOverlay(!state.pointerLocked, "Click to capture mouse");
+  };
+
+  /**
+   * Browsers reject a lock request made too soon after Escape released the previous one,
+   * and they reject silently unless this fires. Without it the overlay just sits there
+   * looking unresponsive with no explanation.
+   */
+  const onPointerLockError = (): void => {
+    setOverlay(true, "Mouse capture blocked - wait a moment and click again");
   };
 
   const onClick = (): void => {
-    if (!state.pointerLocked) void canvas.requestPointerLock();
+    if (state.pointerLocked) return;
+    const request = canvas.requestPointerLock() as unknown as Promise<void> | undefined;
+    // Older browsers return void; newer ones return a promise that can reject.
+    if (request && typeof request.catch === "function") {
+      request.catch(() => onPointerLockError());
+    }
   };
 
   window.addEventListener("keydown", onKeyDown);
@@ -74,6 +96,10 @@ export function createControls(canvas: HTMLCanvasElement): {
   window.addEventListener("mousemove", onMouseMove);
   canvas.addEventListener("wheel", onWheel, { passive: false });
   document.addEventListener("pointerlockchange", onPointerLockChange);
+  document.addEventListener("pointerlockerror", onPointerLockError);
+  // Listen on the canvas, not the overlay. The overlay is `pointer-events: none` so clicks
+  // fall through to the canvas beneath it — otherwise the overlay would swallow the very
+  // click that is meant to dismiss it, and the prompt could never be satisfied.
   canvas.addEventListener("click", onClick);
 
   const forward = new THREE.Vector3();
@@ -122,6 +148,7 @@ export function createControls(canvas: HTMLCanvasElement): {
     window.removeEventListener("mousemove", onMouseMove);
     canvas.removeEventListener("wheel", onWheel);
     document.removeEventListener("pointerlockchange", onPointerLockChange);
+    document.removeEventListener("pointerlockerror", onPointerLockError);
     canvas.removeEventListener("click", onClick);
   };
 

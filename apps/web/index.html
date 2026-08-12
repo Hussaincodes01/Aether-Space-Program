@@ -13,7 +13,10 @@
         font: 13px/1.5 ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
         overflow: hidden;
       }
-      canvas { display: block; }
+      canvas { display: block; position: fixed; inset: 0; z-index: 0; }
+
+      /* Telemetry sits above the dimming overlay so it stays legible before capture. */
+      #hud, #help, #watermark { z-index: 20; }
 
       #hud {
         position: fixed; top: 16px; left: 16px;
@@ -52,18 +55,27 @@
         text-align: right; pointer-events: none;
       }
 
+      /*
+        Visual only. `pointer-events: none` is load-bearing: the overlay covers the canvas,
+        so without it the overlay intercepts the very click that is meant to dismiss it and
+        the prompt can never be satisfied. Clicks fall through to the canvas beneath.
+      */
       #click-to-start {
         position: fixed; inset: 0; display: grid; place-items: center;
-        background: rgba(0, 0, 0, 0.72); cursor: pointer; z-index: 10;
+        background: rgba(0, 0, 0, 0.55); z-index: 10; pointer-events: none;
       }
       #click-to-start span {
         border: 1px solid rgba(120, 170, 255, 0.35); border-radius: 8px;
         padding: 16px 28px; font-size: 14px; color: #d8e8ff;
+        background: rgba(6, 10, 20, 0.8);
       }
 
       /* ── Mission selector ── */
+      /* Above the overlay (z-index 10) so the selector stays usable when the mouse is
+         released with Escape, rather than being greyed out and unclickable. */
       #missions {
         position: fixed; top: 16px; right: 16px; bottom: 56px; width: 330px;
+        z-index: 20;
         overflow-y: auto; padding: 14px 16px;
         background: rgba(6, 10, 20, 0.86);
         border: 1px solid rgba(120, 170, 255, 0.22);
