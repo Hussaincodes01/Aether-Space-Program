@@ -35,6 +35,9 @@ importers:
       '@aether/solar-system':
         specifier: workspace:*
         version: link:../../packages/solar-system
+      '@aether/stars':
+        specifier: workspace:*
+        version: link:../../packages/stars
       '@aether/terrain':
         specifier: workspace:*
         version: link:../../packages/terrain
@@ -84,6 +87,15 @@ importers:
       '@aether/terrain':
         specifier: workspace:*
         version: link:../terrain
+      '@aether/units':
+        specifier: workspace:*
+        version: link:../units
+
+  packages/stars:
+    dependencies:
+      '@aether/physics':
+        specifier: workspace:*
+        version: link:../physics
       '@aether/units':
         specifier: workspace:*
         version: link:../units

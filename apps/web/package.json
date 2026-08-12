@@ -17,6 +17,7 @@
     "@aether/physics": "workspace:*",
     "@aether/schema": "workspace:*",
     "@aether/solar-system": "workspace:*",
+    "@aether/stars": "workspace:*",
     "@aether/terrain": "workspace:*",
     "@aether/units": "workspace:*",
     "three": "^0.171.0"

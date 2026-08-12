@@ -1,0 +1,23 @@
+{
+  "name": "@aether/stars",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Real star catalogue (HYG: Hipparcos, Yale, Gliese) with physical photometry",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./data/*": "./data/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc",
+    "build:catalog": "node scripts/build-catalog.mjs"
+  },
+  "dependencies": {
+    "@aether/physics": "workspace:*",
+    "@aether/units": "workspace:*"
+  }
+}

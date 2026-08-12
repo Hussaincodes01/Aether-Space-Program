@@ -53,6 +53,9 @@ export interface HudData {
   simulationDate: Date;
   /** Seconds of simulation per second of real time. */
   timeScale: number;
+  /** Stars currently uploaded from the real catalogue. */
+  starCount: number;
+  starsComplete: boolean;
 }
 
 const row = (key: string, value: string, cls = "v"): string =>
@@ -98,6 +101,13 @@ export function renderHud(data: HudData): void {
         ? `${data.vertexCount.toLocaleString()} verts — refining`
         : `${data.vertexCount.toLocaleString()} verts`,
       data.refining ? "warn" : "ok",
+    ),
+    row(
+      "stars",
+      data.starCount === 0
+        ? "loading"
+        : `${data.starCount.toLocaleString()}${data.starsComplete ? "" : " (naked-eye)"}`,
+      data.starsComplete ? "ok" : "warn",
     ),
     data.rebasedThisFrame ? row("", "rebased", "ok") : "",
   ].join("");

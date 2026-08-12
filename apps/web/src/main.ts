@@ -61,7 +61,10 @@ renderer.toneMappingExposure = 1.1;
 
 // Start at the present moment, so the planets are where they actually are today.
 const scene = buildSolarScene(secondsSinceJ2000(new Date()));
-scene.three.add(createStarfield({ count: 14000 }));
+
+// The real sky: 109k stars at measured parallax distances. Loads progressively.
+const starfield = createStarfield();
+scene.three.add(starfield.points);
 
 const threeCamera = new THREE.PerspectiveCamera(
   60,
@@ -230,6 +233,8 @@ function frame(now: number): void {
   // 5. Sunlight and atmosphere follow the camera-relative frame like everything else.
   const sunRel = scene.bodies.get("sun")!.mesh.position;
   scene.sunLight.position.copy(sunRel);
+  // Star positions are stored relative to the Sun, so the whole field rides with it.
+  starfield.update(sunRel);
   const sunDistance = sunRel.length();
   scene.sunLight.intensity = Math.max(sunDistance * sunDistance * 1e-6, 1);
 
@@ -263,6 +268,8 @@ function frame(now: number): void {
       : 0,
     vertexCount: nearest?.entry.terrain?.vertexCount ?? 0,
     refining: building !== null,
+    starCount: starfield.count,
+    starsComplete: starfield.complete,
     simulationDate: new Date(Date.UTC(2000, 0, 1, 12) + scene.timeS * 1000),
     timeScale: scene.timeScale,
   });

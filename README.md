@@ -93,6 +93,41 @@ from 0.4–1.8 µm, with a severe degeneracy between planetary radius and surfac
 
 ---
 
+## The sky is a map, not a backdrop
+
+The star field is **109,389 real stars at their measured parallax distances**, from the
+[HYG database](https://codeberg.org/astronexus/hyg) — Hipparcos for the distances, the Yale
+Bright Star Catalogue for the naked-eye sky, Gliese for nearby stars. These are the same
+underlying catalogues OpenSpace's Digital Universe star layer is built from.
+
+Two things make it a map rather than a dome:
+
+- **Positions are three-dimensional and real.** The constellations are an accident of our
+  viewpoint, and would distort if you travelled far enough. Nothing is painted on a sphere.
+- **Brightness is computed, not stored.** Apparent magnitude comes from the distance
+  modulus, `m = M + 5·log₁₀(d) − 5`, so approaching a star brightens it by exactly the
+  right amount.
+
+Colour runs B−V colour index → effective temperature ([Ballesteros 2012](https://doi.org/10.1209/0295-5075/97/34008))
+→ blackbody → sRGB, through the *same* `stellarColor()` that lights the planets. One
+physical model, applied consistently.
+
+The tests check it against the real sky: the brightest star comes out at magnitude −1.46
+(Sirius), there are ~8,700 stars brighter than the naked-eye limit against the ~9,000
+usually quoted, and the count roughly triples per magnitude step as it should.
+
+Loading is progressive — the naked-eye tier is 170 KB and appears immediately; the full
+2.1 MB catalogue streams in behind it.
+
+> **On licensing:** OpenSpace renders from the AMNH Digital Universe atlas, whose
+> [licence](https://www.amnh.org/research/hayden-planetarium/digital-universe/download/digital-universe-license)
+> requires written permission to redistribute inside software. HYG carries the same science
+> from the same sources under CC BY-SA 4.0. Going to the shared upstream is both the more
+> permissive route and the better-provenanced one. See
+> [`packages/stars/data/ATTRIBUTION.md`](packages/stars/data/ATTRIBUTION.md).
+
+---
+
 ## Host stars, at their real colours
 
 <img src="docs/assets/hr-diagram.svg" alt="Hertzsprung-Russell diagram of the catalog host stars" width="100%">
@@ -115,6 +150,7 @@ apps/
   web/            Three.js client — the only package that knows about rendering
 
 packages/
+  stars/          Real star catalogue (HYG) + physical photometry
   solar-system/   Real J2000 elements, Keplerian mechanics, the terrain validation path
   terrain/        Terrain operators + physics admissibility gates + program compilation
   missions/       Mission registry + the evidence model
@@ -236,12 +272,14 @@ Working today:
 - ✅ Star field with a realistic luminosity function and true blackbody colours
 - ✅ Real Solar System: J2000 orbital elements, explicit rotation matrices, Newton-solved
   Kepler equation, validated against published periods and distances
+- ✅ **Real sky**: 109,389 stars at measured parallax distances from HYG (Hipparcos, Yale,
+  Gliese) — the same catalogues OpenSpace draws on, under a redistributable licence
 - ✅ Live terrain generation on approach, released on departure, so memory stays bounded
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
 - ✅ Off-thread terrain generation with progressive refinement — a coarse world appears in
   ~20 ms, then sharpens to ~41k vertices without the tab ever freezing
 - ✅ Frame-rate-independent camera damping and look smoothing
-- ✅ **162 tests**, including the two merge gates the PRD requires and cost guards on
+- ✅ **186 tests**, including the two merge gates the PRD requires and cost guards on
   terrain evaluation
 
 Not built yet: real archive ingestion, chunked LOD for close approach, retrieval ML, the
