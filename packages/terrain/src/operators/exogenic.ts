@@ -10,6 +10,7 @@
 import { defineOperator } from "../registry.js";
 import { frequencyForScale } from "../evaluate.js";
 import { fbm, ridged, smoothstep, worley3 } from "../noise.js";
+import { hasSolidSurface, noSolidSurface } from "../types.js";
 
 /**
  * One crater's radial profile, normalised so the rim sits at r = 1.
@@ -53,8 +54,11 @@ export const impactPopulation = defineOperator({
     largestCraterKm: { min: 1, max: 2_000, default: 120, description: "Largest basin diameter." },
   },
   gate: (ctx) => {
-    // Impacts always happen. The interesting question is retention: an atmosphere screens
-    // small impactors, and resurfacing erases the record.
+    // Impacts always happen — Shoemaker-Levy 9 hit Jupiter. But a gas giant has nothing to
+    // hold a crater, so retention, not impact, is what this operator actually models.
+    if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);
+
+    // An atmosphere screens small impactors, and resurfacing erases the record.
     const heatFlux = ctx.tidalHeatingWm2 + ctx.radiogenicHeatingWm2;
     const atmosphericScreening = Math.min(1, ctx.surfacePressurePa / 1e5);
     const resurfacing = Math.min(1, heatFlux / 0.5);
@@ -114,6 +118,8 @@ export const aeolianTransport = defineOperator({
     wavelengthM: { min: 10, max: 5_000, default: 400, description: "Dune spacing." },
   },
   gate: (ctx) => {
+    if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);
+
     const hasAtmosphere = ctx.surfacePressurePa >= MIN_AEOLIAN_PRESSURE_PA;
     const notDrowned = ctx.hydrosphereFraction < 0.95;
     const admissible = hasAtmosphere && notDrowned;
@@ -173,6 +179,8 @@ export const fluvialErosion = defineOperator({
     networkDensity: { min: 0, max: 1, default: 0.4, description: "Drainage network density." },
   },
   gate: (ctx) => {
+    if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);
+
     const admissible = ctx.stableLiquid !== "none" && ctx.hydrosphereFraction < 0.98;
     // Drainage networks need both a liquid and land to run over. A near-ocean world has
     // little subaerial drainage; a world with a trace hydrosphere has little liquid.
@@ -219,6 +227,8 @@ export const glacialErosion = defineOperator({
     scourDepthM: { min: 0, max: 2_000, default: 200, description: "Glacial scour depth." },
   },
   gate: (ctx) => {
+    if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);
+
     const admissible = ctx.hasStableIce;
     // A tidally locked world traps volatiles on the permanent nightside — a much larger
     // and differently shaped cap than a rotating world's polar caps.

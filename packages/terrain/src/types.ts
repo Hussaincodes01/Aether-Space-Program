@@ -38,6 +38,15 @@ export interface PlanetContext {
   hydrosphereFraction: number;
 }
 
+/**
+ * Below this bulk density a body is envelope-dominated and has no solid surface at all.
+ *
+ * Jupiter is 1326 kg/m3. Every surface-shaping operator must check this: impacts happen on
+ * Jupiter (Shoemaker-Levy 9 did), but there is nothing to hold a crater, and an operator
+ * that forgets to ask will happily carve one into a gas giant.
+ */
+export const MIN_SOLID_SURFACE_DENSITY_KG_M3 = 1500;
+
 /** Why an operator may or may not run. Rendered verbatim in the provenance inspector. */
 export interface Admissibility {
   admissible: boolean;
@@ -105,6 +114,23 @@ export interface EvalContext {
   tidallyLocked: boolean;
   /** Height accumulated by earlier operators, in metres. */
   heightSoFarM: number;
+}
+
+export function hasSolidSurface(context: PlanetContext): boolean {
+  return context.bulkDensityKgM3 >= MIN_SOLID_SURFACE_DENSITY_KG_M3;
+}
+
+/** The rejection every surface operator returns on an envelope-dominated body. */
+export function noSolidSurface(context: PlanetContext): Admissibility {
+  return {
+    admissible: false,
+    gatedBy: "bulk_density",
+    reason:
+      `Bulk density ${(context.bulkDensityKgM3 / 1000).toFixed(2)} g/cm3 implies a volatile ` +
+      `envelope with no solid surface for this process to act on.`,
+    intensityRange: [0, 0],
+    confidence: 0.9,
+  };
 }
 
 export interface TerrainOperator {

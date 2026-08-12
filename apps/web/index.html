@@ -29,8 +29,12 @@
         pointer-events: none;
       }
       #hud h1 {
-        font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
-        color: #6f8ab5; font-weight: 600; margin-bottom: 10px;
+        font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+        color: #d8e8ff; font-weight: 600; margin-bottom: 4px;
+      }
+      #hud .blurb {
+        color: #8ba4c9; font-size: 11px; margin-bottom: 10px;
+        padding-bottom: 8px; border-bottom: 1px solid rgba(120, 170, 255, 0.14);
       }
       .row { display: flex; justify-content: space-between; gap: 20px; }
       .row + .row { margin-top: 3px; }
@@ -142,8 +146,8 @@
       <b>W A S D</b> move &nbsp; <b>R / F</b> up / down &nbsp; <b>Shift</b> boost &nbsp;
       <b>Wheel</b> throttle &nbsp; <b>Esc</b> release mouse
       <p>
-        Fly from 1 AU to the surface without a loading screen. Watch the frame readout
-        rebase as you descend — and watch for jitter. There should be none.
+        You start in low Earth orbit. Every planet is on its real Keplerian orbit at today's
+        date; terrain is generated live as you approach a world and released as you leave.
       </p>
     </div>
     <div id="watermark"></div>

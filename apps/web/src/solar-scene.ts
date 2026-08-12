@@ -1,0 +1,278 @@
+/**
+ * The Solar System, from real orbital elements, with terrain generated live on approach.
+ *
+ * Starting at home is not just friendlier. It is the only place the generator can be
+ * checked: we have maps of Mars and the Moon, so if the operator gates are sound the worlds
+ * here should look recognisable, and if they do not, the rules are wrong. Every exoplanet
+ * this project ever renders inherits its credibility from whether Mars comes out looking
+ * like Mars.
+ *
+ * Positions come from `stateAt` each frame, so the planets really do move on their real
+ * orbits at their real periods. Terrain is built by a worker when the camera closes on a
+ * body and released when it leaves, which keeps memory bounded across a whole system.
+ */
+
+import * as THREE from "three";
+import { AU } from "@aether/units";
+import { stellarColor } from "@aether/physics";
+import {
+  SOLAR_SYSTEM,
+  getBody,
+  orbitalPeriod,
+  perifocalToEcliptic,
+  sampleOrbit,
+  stateAt,
+  toPlanetContext,
+  type Mat3,
+  type SolarBody,
+} from "@aether/solar-system";
+import {
+  attach,
+  createFrame,
+  createUniverseRoot,
+  vec3,
+  type Frame,
+} from "@aether/coordinates";
+import type { PlanetMeshResult } from "./planet-mesh.js";
+
+export type TerrainState = "placeholder" | "building" | "detailed";
+
+export interface SceneBody {
+  data: SolarBody;
+  frame: Frame;
+  mesh: THREE.Mesh;
+  orbitLine?: THREE.Line;
+  /** Cached rotation matrix; the elements are static so this never needs recomputing. */
+  rotation?: Mat3;
+  terrainState: TerrainState;
+  terrain?: PlanetMeshResult;
+  /** Placeholder geometry, kept so it can be restored when terrain is released. */
+  placeholderGeometry: THREE.BufferGeometry;
+}
+
+export interface SolarScene {
+  three: THREE.Scene;
+  universe: Frame;
+  sunFrame: Frame;
+  bodies: Map<string, SceneBody>;
+  sunLight: THREE.PointLight;
+  /** Simulation time, seconds since J2000. */
+  timeS: number;
+  /** Seconds of simulation per second of real time. */
+  timeScale: number;
+}
+
+/** Terrain is built inside this many body radii, and released beyond the outer bound. */
+export const TERRAIN_ENTER_RADII = 14;
+export const TERRAIN_EXIT_RADII = 30;
+
+function placeholderSphere(body: SolarBody): THREE.Mesh {
+  const geometry = new THREE.SphereGeometry(1, 48, 24);
+  const material =
+    body.kind === "star"
+      ? new THREE.MeshBasicMaterial({ color: body.tintHex })
+      : new THREE.MeshStandardMaterial({
+          color: body.tintHex,
+          roughness: 0.9,
+          metalness: 0.02,
+        });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.scale.setScalar(body.radiusM);
+  // Bodies are positioned from f64 each frame; Three must not cull them using the stale
+  // bounding sphere of a unit geometry at astronomical scale.
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
+function orbitLine(body: SolarBody, colour: number): THREE.Line | undefined {
+  if (!body.elements) return undefined;
+
+  const points = sampleOrbit(body.elements, 512).map((p) => new THREE.Vector3(p.x, p.y, p.z));
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const line = new THREE.Line(
+    geometry,
+    new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.22 }),
+  );
+  line.frustumCulled = false;
+  return line;
+}
+
+export function buildSolarScene(startTimeS = 0): SolarScene {
+  const three = new THREE.Scene();
+  const universe = createUniverseRoot();
+
+  // The Sun sits at the origin of the system frame. Barycentric wobble is real but is a few
+  // solar radii, far below anything visible at the scales this view operates over.
+  const sunFrame = createFrame("sun", AU * 60);
+  attach(sunFrame, universe, vec3(0, 0, 0));
+
+  const bodies = new Map<string, SceneBody>();
+
+  for (const data of SOLAR_SYSTEM) {
+    const mesh = placeholderSphere(data);
+    three.add(mesh);
+
+    const frame =
+      data.id === "sun"
+        ? sunFrame
+        : createFrame(data.id, Math.max(data.radiusM * 40, 1e6));
+
+    if (data.id !== "sun") {
+      const parentFrame =
+        data.parentId && bodies.get(data.parentId)
+          ? bodies.get(data.parentId)!.frame
+          : sunFrame;
+      attach(frame, parentFrame, vec3(0, 0, 0));
+    }
+
+    const entry: SceneBody = {
+      data,
+      frame,
+      mesh,
+      rotation: data.elements ? perifocalToEcliptic(data.elements) : undefined,
+      orbitLine: data.id === "sun" ? undefined : orbitLine(data, data.tintHex),
+      terrainState: "placeholder",
+      placeholderGeometry: mesh.geometry,
+    };
+
+    if (entry.orbitLine) three.add(entry.orbitLine);
+    bodies.set(data.id, entry);
+  }
+
+  // Sunlight, coloured by the Sun's actual blackbody temperature. It is very slightly warm,
+  // not pure white, which is why every "white sunlight" render looks subtly wrong.
+  const { linear } = stellarColor(5772);
+  const sunLight = new THREE.PointLight(
+    new THREE.Color(linear.r, linear.g, linear.b),
+    1,
+    0,
+    0,
+  );
+  three.add(sunLight);
+  three.add(new THREE.AmbientLight(0x334455, 0.06));
+
+  const scene: SolarScene = {
+    three,
+    universe,
+    sunFrame,
+    bodies,
+    sunLight,
+    timeS: startTimeS,
+    timeScale: 60 * 60 * 24, // One day per second by default.
+  };
+
+  updateOrbits(scene, startTimeS);
+  return scene;
+}
+
+/**
+ * Advance every body along its real orbit.
+ *
+ * Positions are written into the frame tree in f64 metres; the renderer never sees an
+ * absolute coordinate, only the camera-relative offset computed later.
+ */
+export function updateOrbits(scene: SolarScene, timeS: number): void {
+  scene.timeS = timeS;
+
+  for (const entry of scene.bodies.values()) {
+    if (!entry.data.elements) continue;
+    const { position } = stateAt(entry.data.elements, timeS, entry.rotation);
+    entry.frame.position.x = position.x;
+    entry.frame.position.y = position.y;
+    entry.frame.position.z = position.z;
+
+    // Orbit lines are drawn in the parent's frame, so they move with the parent rather than
+    // with the body — the Moon's orbit follows Earth around the Sun.
+    if (entry.orbitLine && entry.data.parentId) {
+      const parent = scene.bodies.get(entry.data.parentId);
+      if (parent) entry.orbitLine.userData.parentFrame = parent.frame;
+    }
+  }
+}
+
+/** Body rotation about its own axis at the current time, including axial tilt. */
+export function bodyOrientation(body: SolarBody, timeS: number): THREE.Quaternion {
+  const spin =
+    body.rotationPeriodS === 0 ? 0 : (2 * Math.PI * timeS) / body.rotationPeriodS;
+
+  const tilt = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 0, 1),
+    body.axialTiltRad,
+  );
+  const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), spin);
+  return tilt.multiply(rotation);
+}
+
+/** Distance from a point to a body's surface, in body radii. Negative means inside. */
+export function altitudeInRadii(distanceToCentreM: number, body: SolarBody): number {
+  return distanceToCentreM / body.radiusM - 1;
+}
+
+/**
+ * Which body the camera is closest to, by surface distance rather than centre distance.
+ *
+ * Centre distance would name the Sun almost everywhere, since it dwarfs everything else.
+ */
+export function nearestBody(
+  scene: SolarScene,
+  distances: Map<string, number>,
+): { entry: SceneBody; altitudeM: number } | undefined {
+  let best: { entry: SceneBody; altitudeM: number } | undefined;
+
+  for (const [id, distance] of distances) {
+    const entry = scene.bodies.get(id);
+    if (!entry) continue;
+    const altitudeM = distance - entry.data.radiusM;
+    if (!best || altitudeM < best.altitudeM) best = { entry, altitudeM };
+  }
+
+  return best;
+}
+
+/** Attach detailed terrain to a body, releasing the placeholder. */
+export function attachTerrain(entry: SceneBody, terrain: PlanetMeshResult): void {
+  entry.mesh.geometry = terrain.geometry;
+  // The generated mesh carries absolute radii in its vertex positions, so the unit-sphere
+  // scale must be cleared or the planet comes out radius-squared across.
+  entry.mesh.scale.setScalar(1);
+  (entry.mesh.material as THREE.MeshStandardMaterial).vertexColors = true;
+  (entry.mesh.material as THREE.MeshStandardMaterial).color.setScalar(1);
+  (entry.mesh.material as THREE.MeshStandardMaterial).needsUpdate = true;
+  entry.terrain = terrain;
+  entry.terrainState = "detailed";
+}
+
+/**
+ * Release terrain and restore the placeholder.
+ *
+ * Called when the camera leaves a body. Three does not free GPU buffers on garbage
+ * collection, so the dispose is what actually bounds memory across a system tour.
+ */
+export function releaseTerrain(entry: SceneBody): void {
+  if (entry.terrainState !== "detailed" || !entry.terrain) return;
+
+  entry.mesh.geometry = entry.placeholderGeometry;
+  entry.mesh.scale.setScalar(entry.data.radiusM);
+  const material = entry.mesh.material as THREE.MeshStandardMaterial;
+  material.vertexColors = false;
+  material.color.setHex(entry.data.tintHex);
+  material.needsUpdate = true;
+
+  entry.terrain.geometry.dispose();
+  entry.terrain = undefined;
+  entry.terrainState = "placeholder";
+}
+
+/** Terrain context for a body, or undefined where there is no solid surface to generate. */
+export function terrainContextFor(bodyId: string) {
+  const body = getBody(bodyId);
+  if (!body || body.kind === "star") return undefined;
+  const context = toPlanetContext(body);
+  return context.bulkDensityKgM3 >= 1500 ? context : undefined;
+}
+
+/** Human-readable orbital period, for the UI. */
+export function periodDays(body: SolarBody): number | undefined {
+  return body.elements ? orbitalPeriod(body.elements) / 86_400 : undefined;
+}

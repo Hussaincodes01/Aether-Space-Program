@@ -32,6 +32,9 @@ importers:
       '@aether/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+      '@aether/solar-system':
+        specifier: workspace:*
+        version: link:../../packages/solar-system
       '@aether/terrain':
         specifier: workspace:*
         version: link:../../packages/terrain
@@ -75,6 +78,15 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  packages/solar-system:
+    dependencies:
+      '@aether/terrain':
+        specifier: workspace:*
+        version: link:../terrain
+      '@aether/units':
+        specifier: workspace:*
+        version: link:../units
 
   packages/terrain:
     dependencies:

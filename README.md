@@ -115,6 +115,7 @@ apps/
   web/            Three.js client — the only package that knows about rendering
 
 packages/
+  solar-system/   Real J2000 elements, Keplerian mechanics, the terrain validation path
   terrain/        Terrain operators + physics admissibility gates + program compilation
   missions/       Mission registry + the evidence model
   physics/        Formula registry + deterministic derivations with full provenance
@@ -124,10 +125,10 @@ packages/
 ```
 
 ```
-web ──► terrain ──► physics ──► units
- │         └──────► schema ───► units
- ├──────► missions ───────────► units
- └──────► coordinates ────────► units
+web ──► solar-system ──► terrain ──► physics ──► units
+ │                          └──────► schema ───► units
+ ├──────► missions ─────────────────────────────► units
+ └──────► coordinates ──────────────────────────► units
 ```
 
 **The renderer has already changed twice** — C++/OpenGL → Babylon.js → Three.js — and the
@@ -188,11 +189,36 @@ the f32 upload will start to jitter and something has broken.
 
 ---
 
+## Start at home
+
+`pnpm dev` puts you in **low Earth orbit**, on today's date. Every planet sits on its real
+Keplerian orbit, advanced from the JPL approximate elements — orbital periods reproduce the
+published values to better than 0.1%, and to 0.01% for the terrestrial planets.
+
+That starting point is not sentiment. **The Solar System is the only place the generator can
+be checked against ground truth.** Nobody has resolved an exoplanet surface, but we have
+maps of Mars. So the test suite asserts that feeding real parameters into the operator gates
+reproduces worlds we have actually visited:
+
+| World | What the gates must produce | Why |
+|---|---|---|
+| **Moon** | Craters. No wind, water or ice erosion. | Airless, 0 Pa |
+| **Mars** | Dunes and craters, but **no rivers today** | 6 mbar sustains the largest dune fields known; liquid water is not stable |
+| **Earth** | Rivers, dunes and ice | 1 bar, stable water, 71% ocean |
+| **Jupiter** | **No solid surface at all** | 1326 kg/m³ — nothing to stand on, and nothing to hold a crater |
+
+If Mars came out as an ocean world, the rules would be wrong — and no amount of exoplanet
+work would ever have revealed it. Every exoplanet this project renders inherits its
+credibility from whether Mars looks like Mars.
+
+<img src="docs/assets/trappist-1-vs-solar.jpg" alt="The TRAPPIST-1 system compared to the inner Solar System" width="100%">
+
+<sub><i>All seven TRAPPIST-1 planets orbit closer than Mercury. NASA/JPL-Caltech, public domain.</i></sub>
+
 ## Status
 
 **Week 1–2 of the plan in [`docs/PRD.md`](docs/PRD.md): the multi-scale precision spike.**
 
-<img src="docs/assets/trappist-1-vs-solar.jpg" alt="The TRAPPIST-1 system compared to the inner Solar System" width="100%">
 
 <sub><i>All seven TRAPPIST-1 planets orbit closer than Mercury. NASA/JPL-Caltech, public domain.</i></sub>
 
@@ -208,11 +234,14 @@ Working today:
 - ✅ Displaced planet geometry with computed normals and physics-driven surface colour
 - ✅ Rayleigh/Mie atmospheric scattering, coefficients derived from mean molecular weight
 - ✅ Star field with a realistic luminosity function and true blackbody colours
+- ✅ Real Solar System: J2000 orbital elements, explicit rotation matrices, Newton-solved
+  Kepler equation, validated against published periods and distances
+- ✅ Live terrain generation on approach, released on departure, so memory stays bounded
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
 - ✅ Off-thread terrain generation with progressive refinement — a coarse world appears in
   ~20 ms, then sharpens to ~41k vertices without the tab ever freezing
 - ✅ Frame-rate-independent camera damping and look smoothing
-- ✅ **124 tests**, including the two merge gates the PRD requires and cost guards on
+- ✅ **162 tests**, including the two merge gates the PRD requires and cost guards on
   terrain evaluation
 
 Not built yet: real archive ingestion, chunked LOD for close approach, retrieval ML, the

@@ -47,6 +47,12 @@ export interface HudData {
   vertexCount: number;
   /** True while the worker is building the detailed mesh. */
   refining: boolean;
+  nearestBodyName: string;
+  nearestBodyBlurb: string;
+  /** Simulation date — the planets are where they really are at this instant. */
+  simulationDate: Date;
+  /** Seconds of simulation per second of real time. */
+  timeScale: number;
 }
 
 const row = (key: string, value: string, cls = "v"): string =>
@@ -62,13 +68,20 @@ export function renderHud(data: HudData): void {
   const local = data.localPositionMagnitudeM;
   const localHealth = local < 1e12 ? "ok" : "warn";
 
+  const timeScaleLabel =
+    data.timeScale >= 86_400
+      ? `${(data.timeScale / 86_400).toFixed(0)} d/s`
+      : `${(data.timeScale / 3600).toFixed(0)} h/s`;
+
   hud.innerHTML = [
-    "<h1>Precision Spike — TRAPPIST-1</h1>",
+    `<h1>${data.nearestBodyName}</h1>`,
+    data.nearestBodyBlurb ? `<p class="blurb">${data.nearestBodyBlurb}</p>` : "",
+    row("date", data.simulationDate.toISOString().slice(0, 10)),
+    row("time rate", timeScaleLabel),
     row("frame", `${data.frameId} (depth ${data.frameDepth})`),
     row("local coords", formatDistance(local), localHealth),
     row("altitude", formatDistance(data.altitudeM)),
-    row("to star", formatDistance(data.distanceToStarM)),
-    row("speed", formatSpeed(data.speedMs)),
+    row("to Sun", formatDistance(data.distanceToStarM)),
     row("throttle", `${data.throttle.toFixed(3)}x`),
     row("fps", data.fps.toFixed(0), data.fps >= 55 ? "ok" : "warn"),
     row("speculation", `${(data.speculationFraction * 100).toFixed(0)}%`, "warn"),

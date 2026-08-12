@@ -9,6 +9,7 @@
 import { defineOperator } from "../registry.js";
 import { frequencyForScale } from "../evaluate.js";
 import { fbm, ridged, smoothstep, worley3 } from "../noise.js";
+import { hasSolidSurface, noSolidSurface } from "../types.js";
 
 /** Roughly Earth-like heat flux. Below this, resurfacing is too slow to matter visually. */
 const ACTIVE_HEAT_FLUX_WM2 = 0.02;
@@ -33,6 +34,8 @@ export const volcanicConstructs = defineOperator({
     scaleKm: { min: 20, max: 2_000, default: 400, description: "Province width." },
   },
   gate: (ctx) => {
+    if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);
+
     const flux = totalHeatFlux(ctx);
     const admissible = flux >= ACTIVE_HEAT_FLUX_WM2 && ctx.surfaceTemperatureK < BASALT_SOLIDUS_K;
     const intensity = Math.min(1, flux / EXTREME_HEAT_FLUX_WM2);
@@ -101,6 +104,8 @@ export const lavaOcean = defineOperator({
     emissiveStrength: { min: 0, max: 1, default: 0.6, description: "Thermal emission strength." },
   },
   gate: (ctx) => {
+    if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);
+
     const admissible = ctx.surfaceTemperatureK >= BASALT_SOLIDUS_K;
     // A tidally locked lava world melts on the dayside only — the 55 Cancri e case.
     const coverage = ctx.tidallyLocked ? 0.5 : 1;
@@ -140,6 +145,8 @@ export const fractureFields = defineOperator({
     lengthScaleKm: { min: 10, max: 3_000, default: 300, description: "Characteristic length." },
   },
   gate: (ctx) => {
+    if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);
+
     // Two independent routes: tidal flexing of an icy shell (the Europa case), or
     // endogenic tectonics on a rocky body.
     const tidalRoute = ctx.tidalHeatingWm2 >= ACTIVE_HEAT_FLUX_WM2 && ctx.hasStableIce;

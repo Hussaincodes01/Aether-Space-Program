@@ -1,20 +1,22 @@
 /**
- * Multi-scale precision spike — PRD week 1-2.
+ * Aether — Solar System client.
  *
- * The one thing this must prove: continuous flight from 1 AU to a two-metre observer
- * height with no jitter, no loading screen and no popping. If that is not solid, nothing
- * built on top of it can be.
+ * Starts in Earth orbit. Planets move along their real Keplerian orbits at their real
+ * periods, and terrain is generated live in a worker as the camera closes on a body, then
+ * released when it leaves.
  *
- * Per-frame contract:
- *   1. Advance the f64 camera position (controls).
- *   2. Rebase the camera if it has crossed a frame boundary, with hysteresis.
+ * Per-frame contract, unchanged from the precision spike and still the thing that must not
+ * be broken:
+ *   1. Advance simulation time and the f64 orbital positions.
+ *   2. Advance the f64 camera position, then rebase across frames with hysteresis.
  *   3. For each body, resolve its position relative to the camera in f64.
  *   4. Narrow *that offset only* to f32 and hand it to Three.js.
  *   5. Three's camera stays at the origin and only ever rotates.
  */
 
 import * as THREE from "three";
-import { AU } from "@aether/units";
+import { envelopeWidth } from "@aether/missions";
+import { EARTH, secondsSinceJ2000 } from "@aether/solar-system";
 import {
   cameraRelative,
   createCamera,
@@ -22,15 +24,21 @@ import {
   length as vecLength,
   maybeRebase,
 } from "@aether/coordinates";
-import { envelopeWidth } from "@aether/missions";
 import {
-  applyEvidence,
-  buildScene,
-  refinementOptions,
-  replaceTerrain,
-  DEFAULT_TERRAIN_EXAGGERATION,
-} from "./scene.js";
+  TERRAIN_ENTER_RADII,
+  TERRAIN_EXIT_RADII,
+  attachTerrain,
+  bodyOrientation,
+  buildSolarScene,
+  nearestBody,
+  releaseTerrain,
+  terrainContextFor,
+  updateOrbits,
+  type SceneBody,
+} from "./solar-scene.js";
 import { createTerrainBuilder } from "./planet-mesh.js";
+import { createAtmosphere, scaleHeight, type AtmosphereShell } from "./atmosphere.js";
+import { createStarfield } from "./starfield.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
 import { createMissionPanel } from "./mission-panel.js";
@@ -42,18 +50,18 @@ const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: true,
   // Logarithmic depth is the WebGL2 fallback, and Three applies it per-vertex, which
-  // interpolates incorrectly across large triangles. It is enough to prove the traversal;
-  // the production path is cascaded frusta with reversed-Z on WebGPU, and that is the
-  // immediate P0 follow-up rather than a nice-to-have.
+  // interpolates incorrectly across large triangles. Enough to prove the traversal; the
+  // production path is cascaded frusta with reversed-Z, and remains the immediate P0 item.
   logarithmicDepthBuffer: true,
 });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-// An M-dwarf world is dim. Exposure is scaled physically rather than lifted to taste.
-renderer.toneMappingExposure = 1.4;
+renderer.toneMappingExposure = 1.1;
 
-const scene = buildScene();
+// Start at the present moment, so the planets are where they actually are today.
+const scene = buildSolarScene(secondsSinceJ2000(new Date()));
+scene.three.add(createStarfield({ count: 14000 }));
 
 const threeCamera = new THREE.PerspectiveCamera(
   60,
@@ -61,49 +69,107 @@ const threeCamera = new THREE.PerspectiveCamera(
   0.1,
   1e15,
 );
-// The Three camera never moves. Only the universe does.
 threeCamera.position.set(0, 0, 0);
 
-// Start 1 AU from the star, looking at the planet.
-const camera = createCamera(scene.system, { x: AU, y: 0, z: 0.2 * AU });
+// Begin in low Earth orbit, looking down. Home first.
+const earthEntry = scene.bodies.get("earth")!;
+const camera = createCamera(earthEntry.frame, {
+  x: EARTH.radiusM * 2.6,
+  y: EARTH.radiusM * 0.6,
+  z: 0,
+});
 
 const controls = createControls(canvas);
 renderWatermark();
 
-// Mission selection drives what the app may claim, and therefore how speculative the world
-// looks. Applied once at startup and again on every change.
 const missionPanel = createMissionPanel("today");
 document.body.appendChild(missionPanel.element);
-
 let currentEnvelopeWidth = envelopeWidth(missionPanel.getProfile());
-applyEvidence(scene, currentEnvelopeWidth);
-
 missionPanel.onChange((profile) => {
   currentEnvelopeWidth = envelopeWidth(profile);
-  applyEvidence(scene, currentEnvelopeWidth);
 });
 
-// Refine the coarse startup mesh in a worker. The scene is interactive throughout — the
-// planet simply sharpens a moment after it appears, rather than the tab freezing for a
-// second before anything is drawn.
-const terrainBuilder = createTerrainBuilder();
-let refining = true;
+// ── Live terrain ────────────────────────────────────────────────────────────────────────
 
-terrainBuilder
-  .build(refinementOptions(scene, 6, DEFAULT_TERRAIN_EXAGGERATION))
-  .then((refined) => {
-    replaceTerrain(scene, refined);
-    applyEvidence(scene, currentEnvelopeWidth);
-  })
-  .catch((error: unknown) => {
-    // A failed refinement is not fatal — the coarse mesh is still a valid world.
-    console.warn("Terrain refinement failed; keeping the coarse mesh.", error);
-  })
-  .finally(() => {
-    refining = false;
+const terrainBuilder = createTerrainBuilder();
+/** One build at a time: several concurrent workers would fight for the same core. */
+let building: string | null = null;
+let atmosphere: AtmosphereShell | null = null;
+let atmosphereBodyId: string | null = null;
+
+function requestTerrain(entry: SceneBody): void {
+  if (building || entry.terrainState !== "placeholder") return;
+  const context = terrainContextFor(entry.data.id);
+  if (!context) return;
+
+  building = entry.data.id;
+  entry.terrainState = "building";
+
+  terrainBuilder
+    .build({
+      context,
+      seed: `sha256:${entry.data.id}:v1`,
+      subdivisions: 6,
+      terrainExaggeration: TERRAIN_EXAGGERATION,
+    })
+    .then((result) => {
+      attachTerrain(entry, result);
+      attachAtmosphere(entry);
+    })
+    .catch((error: unknown) => {
+      // A failed build leaves the placeholder in place, which is still a valid world.
+      console.warn(`Terrain build failed for ${entry.data.id}`, error);
+      entry.terrainState = "placeholder";
+    })
+    .finally(() => {
+      building = null;
+    });
+}
+
+function attachAtmosphere(entry: SceneBody): void {
+  detachAtmosphere();
+  const body = entry.data;
+  if (body.surfacePressurePa <= 0) return;
+
+  // Mean molecular weight is an assumption for every body except the few with measured
+  // composition, and the sky colour it produces inherits that uncertainty.
+  const meanMolecularWeightAmu = body.id === "venus" || body.id === "mars" ? 44.01 : 28.013;
+  const gravity = (6.6743e-11 * body.massKg) / body.radiusM ** 2;
+
+  atmosphere = createAtmosphere({
+    planetRadiusM: body.radiusM,
+    scaleHeightM: scaleHeight({
+      surfaceTemperatureK: body.surfaceTemperatureK,
+      meanMolecularWeightAmu,
+      surfaceGravityMs2: gravity,
+    }),
+    surfacePressurePa: body.surfacePressurePa,
+    meanMolecularWeightAmu,
+    surfaceTemperatureK: body.surfaceTemperatureK,
+    surfaceGravityMs2: gravity,
+    starColour: new THREE.Color(1.0, 0.945, 0.918),
   });
 
-const relative = new THREE.Vector3();
+  if (atmosphere) {
+    scene.three.add(atmosphere.mesh);
+    atmosphereBodyId = body.id;
+  }
+}
+
+function detachAtmosphere(): void {
+  if (!atmosphere) return;
+  scene.three.remove(atmosphere.mesh);
+  atmosphere.mesh.geometry.dispose();
+  atmosphere.material.dispose();
+  atmosphere = null;
+  atmosphereBodyId = null;
+}
+
+const TERRAIN_EXAGGERATION = 25;
+
+// ── Loop ────────────────────────────────────────────────────────────────────────────────
+
+const distances = new Map<string, number>();
 let lastTime = performance.now();
 let smoothedFps = 60;
 
@@ -119,69 +185,86 @@ function frame(now: number): void {
   lastTime = now;
   smoothedFps = smoothedFps * 0.92 + (1 / Math.max(dt, 1e-4)) * 0.08;
 
-  // 1. Altitude drives movement speed, so it is needed before the controls run.
-  const toPlanet = cameraRelative(camera, scene.planet.frame);
-  const altitude = vecLength(toPlanet) - scene.planet.radiusM;
+  // 1. Real orbital motion.
+  updateOrbits(scene, scene.timeS + dt * scene.timeScale);
 
-  const before = { ...camera.position };
-  controls.update(camera, threeCamera, altitude, dt);
-  const speed =
-    Math.hypot(
-      camera.position.x - before.x,
-      camera.position.y - before.y,
-      camera.position.z - before.z,
-    ) / Math.max(dt, 1e-6);
+  // 2. Resolve every body relative to the camera, in f64, and record surface distances.
+  distances.clear();
+  for (const entry of scene.bodies.values()) {
+    const rel = cameraRelative(camera, entry.frame);
+    entry.mesh.position.set(rel.x, rel.y, rel.z);
+    entry.mesh.quaternion.copy(bodyOrientation(entry.data, scene.timeS));
 
-  // 2. Rebase with hysteresis. Entering at 4x scale and leaving at 8x leaves a wide dead
-  //    band, so a camera hovering near a boundary cannot flip frames every frame.
+    if (entry.orbitLine) {
+      const parent = scene.bodies.get(entry.data.parentId ?? "sun");
+      if (parent) {
+        const parentRel = cameraRelative(camera, parent.frame);
+        entry.orbitLine.position.set(parentRel.x, parentRel.y, parentRel.z);
+      }
+    }
+
+    distances.set(entry.data.id, Math.hypot(rel.x, rel.y, rel.z));
+  }
+
+  const nearest = nearestBody(scene, distances);
+  const altitudeM = nearest?.altitudeM ?? 1e9;
+
+  // 3. Camera, then rebase with hysteresis so a hovering camera cannot flip frames.
+  controls.update(camera, threeCamera, altitudeM, dt);
   const rebased = maybeRebase(camera, scene.universe, { enterFactor: 4, exitFactor: 8 });
 
-  // 3-4. Resolve every body relative to the camera in f64, then narrow only the offset.
-  for (const body of scene.bodies) {
-    const rel = cameraRelative(camera, body.frame);
-    body.mesh.position.set(rel.x, rel.y, rel.z);
+  // 4. Generate terrain on approach; release it on departure.
+  if (nearest) {
+    const radii = nearest.altitudeM / nearest.entry.data.radiusM;
+    if (radii < TERRAIN_ENTER_RADII) requestTerrain(nearest.entry);
   }
-  // Shells that wrap the planet track it.
-  scene.speculationShell.position.copy(scene.planet.mesh.position);
-  if (scene.atmosphere) {
-    scene.atmosphere.mesh.position.copy(scene.planet.mesh.position);
-    scene.atmosphere.setPlanetCentre(scene.planet.mesh.position);
-    // Direction from the planet toward the star, for the scattering integral.
-    scene.atmosphere.setSunDirection(
-      new THREE.Vector3().subVectors(scene.star.mesh.position, scene.planet.mesh.position),
+  for (const entry of scene.bodies.values()) {
+    if (entry.terrainState !== "detailed") continue;
+    const distance = distances.get(entry.data.id) ?? Infinity;
+    if ((distance - entry.data.radiusM) / entry.data.radiusM > TERRAIN_EXIT_RADII) {
+      releaseTerrain(entry);
+      if (atmosphereBodyId === entry.data.id) detachAtmosphere();
+    }
+  }
+
+  // 5. Sunlight and atmosphere follow the camera-relative frame like everything else.
+  const sunRel = scene.bodies.get("sun")!.mesh.position;
+  scene.sunLight.position.copy(sunRel);
+  const sunDistance = sunRel.length();
+  scene.sunLight.intensity = Math.max(sunDistance * sunDistance * 1e-6, 1);
+
+  if (atmosphere && atmosphereBodyId) {
+    const host = scene.bodies.get(atmosphereBodyId)!;
+    atmosphere.mesh.position.copy(host.mesh.position);
+    atmosphere.setPlanetCentre(host.mesh.position);
+    atmosphere.setSunDirection(
+      new THREE.Vector3().subVectors(sunRel, host.mesh.position),
     );
   }
-  // The star shell sits at effective infinity, so it rides with the camera rather than
-  // being left behind — parallax over a few AU is far below one pixel at 4e17 m.
-  scene.starfield.position.set(0, 0, 0);
-
-  // The light sits at the star, camera-relative like everything else.
-  const starRel = cameraRelative(camera, scene.star.frame);
-  scene.starLight.position.set(starRel.x, starRel.y, starRel.z);
-  // Inverse-square falloff from true luminosity would blow out or vanish depending on
-  // distance; intensity is set so the planet reads correctly at its own orbit.
-  const starDistance = Math.hypot(starRel.x, starRel.y, starRel.z);
-  scene.starLight.intensity = Math.max(starDistance * starDistance * 1e-6, 1);
-
-  relative.set(toPlanet.x, toPlanet.y, toPlanet.z);
 
   renderer.render(scene.three, threeCamera);
 
   renderHud({
     frameId: camera.frame.id,
     frameDepth: frameDepth(camera.frame),
-    altitudeM: altitude,
-    distanceToStarM: starDistance,
-    speedMs: speed,
+    altitudeM,
+    nearestBodyName: nearest?.entry.data.name ?? "deep space",
+    nearestBodyBlurb: nearest?.entry.data.blurb ?? "",
+    distanceToStarM: sunDistance,
+    speedMs: 0,
     throttle: controls.state.throttle,
     fps: smoothedFps,
     localPositionMagnitudeM: vecLength(camera.position),
     rebasedThisFrame: rebased,
     speculationFraction: currentEnvelopeWidth,
-    terrainExaggeration: scene.terrain.exaggeration,
-    reliefM: scene.terrain.reliefM.maxM - scene.terrain.reliefM.minM,
-    vertexCount: scene.terrain.vertexCount,
-    refining,
+    terrainExaggeration: TERRAIN_EXAGGERATION,
+    reliefM: nearest?.entry.terrain
+      ? nearest.entry.terrain.reliefM.maxM - nearest.entry.terrain.reliefM.minM
+      : 0,
+    vertexCount: nearest?.entry.terrain?.vertexCount ?? 0,
+    refining: building !== null,
+    simulationDate: new Date(Date.UTC(2000, 0, 1, 12) + scene.timeS * 1000),
+    timeScale: scene.timeScale,
   });
 
   requestAnimationFrame(frame);
