@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      # Includes the gates the PRD requires to block a merge:
+      #   - LLM containment (§19.1): no forbidden field may reach ScienceSpec
+      #   - catalog diversity (§9.5): no two worlds may be near-duplicates
+      #   - physics property tests (§9): monotonicity, unit invariance, domain enforcement
+      - name: Test
+        run: pnpm run test
+
+      - name: Build client
+        run: pnpm --filter @aether/web run build

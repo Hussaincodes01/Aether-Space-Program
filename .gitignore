@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+.env
+.env.local
+.DS_Store
+
+# Data + model artifacts live in object storage / DVC, never in git
+data/snapshots/
+*.parquet
+*.pkl
+*.onnx

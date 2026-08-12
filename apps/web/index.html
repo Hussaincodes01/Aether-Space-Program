@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aether — Multi-Scale Precision Spike</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        background: #000;
+        color: #cfe3ff;
+        font: 13px/1.5 ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+        overflow: hidden;
+      }
+      canvas { display: block; }
+
+      #hud {
+        position: fixed; top: 16px; left: 16px;
+        background: rgba(6, 10, 20, 0.78);
+        border: 1px solid rgba(120, 170, 255, 0.22);
+        border-radius: 8px;
+        padding: 14px 16px;
+        min-width: 300px;
+        backdrop-filter: blur(8px);
+        pointer-events: none;
+      }
+      #hud h1 {
+        font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: #6f8ab5; font-weight: 600; margin-bottom: 10px;
+      }
+      .row { display: flex; justify-content: space-between; gap: 20px; }
+      .row + .row { margin-top: 3px; }
+      .k { color: #6f8ab5; }
+      .v { color: #d8e8ff; font-variant-numeric: tabular-nums; }
+      .warn { color: #ffb454; }
+      .ok { color: #7ee081; }
+
+      #help {
+        position: fixed; bottom: 16px; left: 16px;
+        background: rgba(6, 10, 20, 0.78);
+        border: 1px solid rgba(120, 170, 255, 0.22);
+        border-radius: 8px; padding: 12px 16px; max-width: 460px;
+        pointer-events: none;
+      }
+      #help b { color: #d8e8ff; font-weight: 600; }
+      #help p { color: #8ba4c9; margin-top: 6px; }
+
+      #watermark {
+        position: fixed; bottom: 16px; right: 16px;
+        color: rgba(160, 185, 220, 0.55); font-size: 11px; max-width: 320px;
+        text-align: right; pointer-events: none;
+      }
+
+      #click-to-start {
+        position: fixed; inset: 0; display: grid; place-items: center;
+        background: rgba(0, 0, 0, 0.72); cursor: pointer; z-index: 10;
+      }
+      #click-to-start span {
+        border: 1px solid rgba(120, 170, 255, 0.35); border-radius: 8px;
+        padding: 16px 28px; font-size: 14px; color: #d8e8ff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hud"></div>
+    <div id="help">
+      <b>W A S D</b> move &nbsp; <b>R / F</b> up / down &nbsp; <b>Shift</b> boost &nbsp;
+      <b>Wheel</b> throttle &nbsp; <b>Esc</b> release mouse
+      <p>
+        Fly from 1 AU to the surface without a loading screen. Watch the frame readout
+        rebase as you descend — and watch for jitter. There should be none.
+      </p>
+    </div>
+    <div id="watermark"></div>
+    <div id="click-to-start"><span>Click to capture mouse</span></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
