@@ -76,6 +76,37 @@ export interface ParameterSpec {
   scalesWithIntensity?: boolean;
 }
 
+/**
+ * Everything an operator needs to compute its height contribution at one point.
+ *
+ * Operators run in layer order and each sees `heightSoFarM`, so erosional processes can
+ * cut into what construction laid down — which is how the real sequence works, and why
+ * simply summing independent noise fields never looks like geology.
+ */
+export interface EvalContext {
+  /** Unit direction on the sphere, in planet-fixed coordinates. */
+  dir: Readonly<{ x: number; y: number; z: number }>;
+  /** Resolved and clamped parameters for this operator. */
+  params: Readonly<Record<string, number>>;
+  /** Per-operator seed, derived from the world seed and the operator id. */
+  seed: number;
+  /** Planet radius in metres, for turning a feature size in km into an angular frequency. */
+  radiusM: number;
+  /** Latitude, -pi/2 to pi/2. */
+  latitude: number;
+  /**
+   * Angle from the substellar point, 0 to pi.
+   *
+   * On a tidally locked world this replaces latitude as the axis along which climate
+   * varies: the cold trap is at the antistellar point, not at the poles.
+   */
+  substellarAngle: number;
+  /** True when the climate axis is substellar angle rather than latitude. */
+  tidallyLocked: boolean;
+  /** Height accumulated by earlier operators, in metres. */
+  heightSoFarM: number;
+}
+
 export interface TerrainOperator {
   id: string;
   name: string;
@@ -90,6 +121,14 @@ export interface TerrainOperator {
   parameters: Readonly<Record<string, ParameterSpec>>;
   /** Decide whether this process could operate on this world, and how strongly. */
   gate(context: PlanetContext): Admissibility;
+  /**
+   * Height contribution at a point, in metres, to be **added** to what came before.
+   *
+   * Constructional processes return positive values, erosional ones negative. Omit it and
+   * the operator contributes nothing to geometry — legitimate for a purely cosmetic layer,
+   * but for anything else it means the process is declared and not implemented.
+   */
+  evaluate?: (context: EvalContext) => number;
 }
 
 /** An operator that passed its gate, with parameters resolved and clamped. */

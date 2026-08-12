@@ -40,6 +40,10 @@ export interface HudData {
   rebasedThisFrame: boolean;
   /** 0..1 — how much of the rendered world is inferred rather than measured. */
   speculationFraction: number;
+  /** Vertical exaggeration applied to terrain. Never hidden from the user. */
+  terrainExaggeration: number;
+  /** True peak-to-trough relief, metres, before exaggeration. */
+  reliefM: number;
 }
 
 const row = (key: string, value: string, cls = "v"): string =>
@@ -65,6 +69,13 @@ export function renderHud(data: HudData): void {
     row("throttle", `${data.throttle.toFixed(3)}x`),
     row("fps", data.fps.toFixed(0), data.fps >= 55 ? "ok" : "warn"),
     row("speculation", `${(data.speculationFraction * 100).toFixed(0)}%`, "warn"),
+    row("true relief", formatDistance(data.reliefM)),
+    // Never hidden. Every planet you have seen rendered is exaggerated; we say by how much.
+    row(
+      "terrain scale",
+      data.terrainExaggeration === 1 ? "1x (true)" : `${data.terrainExaggeration.toFixed(0)}x`,
+      data.terrainExaggeration === 1 ? "ok" : "warn",
+    ),
     data.rebasedThisFrame ? row("", "rebased", "ok") : "",
   ].join("");
 }

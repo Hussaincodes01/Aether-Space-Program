@@ -150,8 +150,16 @@ describe("determinism", () => {
     for (let i = 1; i < ops.length; i++) {
       expect(ops[i]!.layerOrder).toBeGreaterThanOrEqual(ops[i - 1]!.layerOrder);
     }
-    // Microdetail is always last.
-    expect(ops[ops.length - 1]!.id).toBe("microdetail");
+
+    const order = ops.map((o) => o.id);
+    // Construction before erosion: rivers must have a mountain to cut into.
+    expect(order.indexOf("long_wavelength_isostasy")).toBeLessThan(
+      order.indexOf("fluvial_erosion"),
+    );
+    // Detail roughens the finished solid surface, so it comes after the shaping passes.
+    expect(order.indexOf("microdetail")).toBeGreaterThan(order.indexOf("aeolian_transport"));
+    // Flooding is last of all — a liquid surface is level, and covers whatever is beneath.
+    expect(order[order.length - 1]).toBe("lava_ocean");
   });
 });
 

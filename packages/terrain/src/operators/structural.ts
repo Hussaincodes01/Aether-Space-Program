@@ -3,6 +3,8 @@
  */
 
 import { defineOperator } from "../registry.js";
+import { frequencyForScale } from "../evaluate.js";
+import { fbm, warp } from "../noise.js";
 
 /** Below this bulk density the body is envelope-dominated and has no solid surface at all. */
 const MIN_SOLID_DENSITY_KG_M3 = 1500;
@@ -34,6 +36,12 @@ export const referenceEllipsoid = defineOperator({
       intensityRange: [1, 1],
       confidence: 0.9,
     };
+  },
+  // Rotational flattening: r(lat) = R(1 - f sin^2 lat). Small, but it is the datum every
+  // other operator displaces from, so getting it wrong tilts everything above it.
+  evaluate: ({ params, radiusM, latitude }) => {
+    const f = params.flattening ?? 0;
+    return -f * radiusM * Math.sin(latitude) ** 2;
   },
 });
 
@@ -77,6 +85,19 @@ export const longWavelengthIsostasy = defineOperator({
       confidence: 0.5,
     };
   },
+  /**
+   * Domain-warped fBm.
+   *
+   * The warp is what separates continents from noise. Plain fBm gives isotropic blobs;
+   * offsetting the sample point by another noise field introduces the meandering,
+   * directional structure that reads as coastline and mountain belt.
+   */
+  evaluate: ({ dir, params, seed, radiusM }) => {
+    const freq = frequencyForScale(params.continentalScaleKm ?? 1800, radiusM);
+    const [wx, wy, wz] = warp(dir.x * freq, dir.y * freq, dir.z * freq, seed, 0.35);
+    const n = fbm(wx, wy, wz, seed, { octaves: 6, gain: 0.5 });
+    return n * (params.reliefAmplitudeM ?? 0);
+  },
 });
 
 export const microdetail = defineOperator({
@@ -103,4 +124,14 @@ export const microdetail = defineOperator({
     intensityRange: [0, 1],
     confidence: 0.2,
   }),
+  // Roughness at roughly 20 km features — the finest scale a global mesh can resolve.
+  // True sub-metre grain belongs in the shader's detail-normal pass, not in geometry.
+  evaluate: ({ dir, params, seed, radiusM }) => {
+    const freq = frequencyForScale(20, radiusM);
+    const n = fbm(dir.x * freq, dir.y * freq, dir.z * freq, seed, {
+      octaves: Math.round(params.octaves ?? 4),
+      gain: 0.55,
+    });
+    return n * (params.amplitudeM ?? 0);
+  },
 });

@@ -7,6 +7,8 @@
  */
 
 import { defineOperator } from "../registry.js";
+import { frequencyForScale } from "../evaluate.js";
+import { fbm, ridged, smoothstep, worley3 } from "../noise.js";
 
 /** Roughly Earth-like heat flux. Below this, resurfacing is too slow to matter visually. */
 const ACTIVE_HEAT_FLUX_WM2 = 0.02;
@@ -56,6 +58,29 @@ export const volcanicConstructs = defineOperator({
       confidence: ctx.systemAgeS === null ? 0.2 : 0.4,
     };
   },
+  /**
+   * Shield edifices on flood-basalt provinces.
+   *
+   * Worley feature points become volcanic centres; a low-frequency mask decides which
+   * regions are volcanically active, so edifices cluster into provinces instead of
+   * sprinkling uniformly over the globe the way raw cellular noise would.
+   */
+  evaluate: ({ dir, params, seed, radiusM }) => {
+    const scaleKm = params.scaleKm ?? 400;
+    const freq = frequencyForScale(scaleKm, radiusM);
+
+    const province = fbm(dir.x * freq * 0.3, dir.y * freq * 0.3, dir.z * freq * 0.3, seed + 11, {
+      octaves: 3,
+    });
+    // Coverage sets how much of the surface is inside a province.
+    const active = smoothstep(0.6 - (params.coverage ?? 0.2) * 1.4, 0.75, province * 0.5 + 0.5);
+    if (active <= 0) return 0;
+
+    const { f1 } = worley3(dir.x * freq, dir.y * freq, dir.z * freq, seed);
+    // Shields are broad and low-sloped; the exponent controls the flank profile.
+    const cone = Math.max(0, 1 - f1 / 0.45);
+    return Math.pow(cone, 2.2) * (params.edificeHeightM ?? 0) * active;
+  },
 });
 
 export const lavaOcean = defineOperator({
@@ -63,7 +88,14 @@ export const lavaOcean = defineOperator({
   name: "Lava ocean",
   description: "A globally or hemispherically molten silicate surface.",
   references: [],
-  layerOrder: 25,
+  /**
+   * Runs last, after every solid-shaping process including microdetail.
+   *
+   * A liquid surface is level by definition. Flooding earlier let fractures and detail
+   * noise roughen the sea afterwards, which produced a visibly and physically wrong
+   * corrugated lava ocean. Anything submerged is simply covered — that is what a melt does.
+   */
+  layerOrder: 110,
   parameters: {
     coverage: { min: 0, max: 1, default: 0.5, description: "Molten fraction of the surface." },
     emissiveStrength: { min: 0, max: 1, default: 0.6, description: "Thermal emission strength." },
@@ -81,6 +113,17 @@ export const lavaOcean = defineOperator({
       intensityRange: [coverage * 0.5, coverage],
       confidence: 0.5,
     };
+  },
+  /**
+   * Molten sea filling the low ground.
+   *
+   * Flooding to a level rather than adding a noise field: a liquid surface is flat, and the
+   * visual signature of a lava world is exactly that contrast between a dead-level sea and
+   * the ridges standing out of it.
+   */
+  evaluate: ({ params, heightSoFarM }) => {
+    const seaLevelM = ((params.coverage ?? 0.5) - 0.5) * 3000;
+    return heightSoFarM < seaLevelM ? seaLevelM - heightSoFarM : 0;
   },
 });
 
@@ -114,5 +157,17 @@ export const fractureFields = defineOperator({
       intensityRange: [0.05, tidalRoute ? 0.9 : 0.5],
       confidence: 0.3,
     };
+  },
+  /**
+   * Narrow extensional fractures.
+   *
+   * Ridged noise thresholded hard near its crests, which leaves thin linear troughs rather
+   * than broad valleys — the difference between Valles Marineris and a river system.
+   */
+  evaluate: ({ dir, params, seed, radiusM }) => {
+    const freq = frequencyForScale(params.lengthScaleKm ?? 300, radiusM);
+    const r = ridged(dir.x * freq, dir.y * freq, dir.z * freq, seed, { octaves: 4 });
+    const crack = smoothstep(0.86, 1.0, r);
+    return -crack * (params.depthM ?? 0) * (params.density ?? 0);
   },
 });

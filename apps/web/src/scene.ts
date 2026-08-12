@@ -14,7 +14,8 @@
 
 import * as THREE from "three";
 import { AU, LIGHT_YEAR, earthRadii, solarRadii } from "@aether/units";
-import { stellarColor } from "@aether/physics";
+import { MOLECULAR_WEIGHT, stellarColor } from "@aether/physics";
+import { TRAPPIST_1E, type PlanetContext } from "@aether/terrain";
 import {
   attach,
   createFrame,
@@ -22,14 +23,15 @@ import {
   vec3,
   type Frame,
 } from "@aether/coordinates";
+import { buildPlanetGeometry, type PlanetMeshResult } from "./planet-mesh.js";
+import { createAtmosphere, scaleHeight, type AtmosphereShell } from "./atmosphere.js";
+import { createStarfield } from "./starfield.js";
 
 export interface Body {
   name: string;
   frame: Frame;
   radiusM: number;
   mesh: THREE.Mesh;
-  /** True for the star: it lights the scene rather than being lit. */
-  emissive: boolean;
 }
 
 export interface Scene {
@@ -40,45 +42,57 @@ export interface Scene {
   star: Body;
   planet: Body;
   starLight: THREE.PointLight;
-  /** Amber rim whose strength tracks how much of the world is inferred rather than measured. */
+  starfield: THREE.Points;
+  atmosphere: AtmosphereShell | null;
+  /** Amber rim whose strength tracks how much of the world is inferred, not measured. */
   speculationShell: THREE.Mesh;
+  terrain: PlanetMeshResult;
+  context: PlanetContext;
 }
 
-/** TRAPPIST-1 and TRAPPIST-1 e, from the published parameters the ingest will supply in P1. */
 const TRAPPIST_1 = {
   distanceLy: 40.66,
   starRadiusM: solarRadii(0.1192),
   starTeffK: 2566,
   planetSemimajorAxisM: 0.02925 * AU,
-  planetRadiusM: earthRadii(0.92),
 };
 
-function makeSphere(
-  radiusM: number,
-  material: THREE.Material,
-  segments: number,
-): THREE.Mesh {
-  // Unit sphere scaled to radius, so one geometry can be shared if we add more bodies.
+/**
+ * Vertical exaggeration for the terrain.
+ *
+ * Earth's entire relief is 0.3% of its radius — at true scale a terrestrial planet is
+ * smoother than a billiard ball. Every "realistic" planet you have seen is exaggerated;
+ * Aether just says by how much, in the HUD, and lets you set it to 1 to see the truth.
+ */
+export const DEFAULT_TERRAIN_EXAGGERATION = 45;
+
+function makeSphere(radiusM: number, material: THREE.Material, segments: number): THREE.Mesh {
   const geometry = new THREE.SphereGeometry(1, segments, segments / 2);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.scale.setScalar(radiusM);
-  // Bodies are placed manually from f64 every frame; Three must not cull them using the
+  // Bodies are placed manually from f64 each frame; Three must not cull them using the
   // stale bounding sphere of a unit geometry at astronomical scale.
   mesh.frustumCulled = false;
   return mesh;
 }
 
-export function buildScene(): Scene {
+export function buildScene(
+  terrainExaggeration = DEFAULT_TERRAIN_EXAGGERATION,
+): Scene {
   const three = new THREE.Scene();
+  const context = TRAPPIST_1E;
 
   const universe = createUniverseRoot();
-
   const system = createFrame("system:TRAPPIST-1", AU * 50);
   attach(system, universe, vec3(TRAPPIST_1.distanceLy * LIGHT_YEAR, 0, 0));
 
+  // ── Background sky ────────────────────────────────────────────────────────────────────
+  const starfield = createStarfield({ count: 14000 });
+  three.add(starfield);
+
   // ── Star ──────────────────────────────────────────────────────────────────────────────
-  // Colour comes straight from the physics layer. An M-dwarf at 2566 K is genuinely
-  // orange-red; this is the first place in the app where a measurement becomes a pixel.
+  // Colour straight from the physics layer. An M-dwarf at 2566 K is genuinely orange-red;
+  // this is the first place a measurement becomes a pixel.
   const { linear } = stellarColor(TRAPPIST_1.starTeffK);
   const starColour = new THREE.Color(linear.r, linear.g, linear.b);
 
@@ -97,37 +111,65 @@ export function buildScene(): Scene {
     frame: starFrame,
     radiusM: TRAPPIST_1.starRadiusM,
     mesh: starMesh,
-    emissive: true,
   };
 
   // ── Planet ────────────────────────────────────────────────────────────────────────────
-  const planetFrame = createFrame("planet:TRAPPIST-1 e", TRAPPIST_1.planetRadiusM);
+  // Geometry comes from the compiled terrain program: every hill was put there by a gated
+  // geological process, and the inspector can name which.
+  const planetFrame = createFrame("planet:TRAPPIST-1 e", context.radiusM);
   attach(planetFrame, system, vec3(TRAPPIST_1.planetSemimajorAxisM, 0, 0));
 
-  const planetMesh = makeSphere(
-    TRAPPIST_1.planetRadiusM,
-    // Untextured on purpose. The PRD is explicit: prove the scale transition before any
-    // art exists, or the art will hide the jitter.
-    new THREE.MeshStandardMaterial({ color: 0x8a8378, roughness: 0.95, metalness: 0 }),
-    128,
+  const terrain = buildPlanetGeometry({
+    context,
+    seed: "sha256:trappist-1e:v1",
+    subdivisions: 5,
+    terrainExaggeration,
+  });
+
+  const planetMesh = new THREE.Mesh(
+    terrain.geometry,
+    new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.92,
+      metalness: 0.02,
+      flatShading: false,
+    }),
   );
+  planetMesh.frustumCulled = false;
   three.add(planetMesh);
 
   const planet: Body = {
     name: "TRAPPIST-1 e",
     frame: planetFrame,
-    radiusM: TRAPPIST_1.planetRadiusM,
+    radiusM: context.radiusM,
     mesh: planetMesh,
-    emissive: false,
   };
 
+  // ── Atmosphere ────────────────────────────────────────────────────────────────────────
+  // Composition has never been measured for this planet, so mean molecular weight is an
+  // assumption — and the sky colour it produces is therefore a low-confidence claim, badged
+  // as such in the inspector rather than presented as observation.
+  const meanMolecularWeightAmu = MOLECULAR_WEIGHT.N2;
+  const atmosphere = createAtmosphere({
+    planetRadiusM: context.radiusM,
+    scaleHeightM: scaleHeight({
+      surfaceTemperatureK: context.surfaceTemperatureK,
+      meanMolecularWeightAmu,
+      surfaceGravityMs2: context.surfaceGravityMs2,
+    }),
+    surfacePressurePa: context.surfacePressurePa,
+    meanMolecularWeightAmu,
+    surfaceTemperatureK: context.surfaceTemperatureK,
+    surfaceGravityMs2: context.surfaceGravityMs2,
+    starColour,
+  });
+  if (atmosphere) three.add(atmosphere.mesh);
+
   // ── Speculation shimmer ───────────────────────────────────────────────────────────────
-  // The PRD's most distinctive UI idea, wired to the evidence model rather than to a
-  // hand-set number: the less the selected missions constrain, the more strongly the
-  // planet is rimmed in amber. A world drawn from three parameters should *look* like a
-  // world drawn from three parameters.
+  // Wired to the evidence model rather than to a hand-set number: the less the selected
+  // missions constrain, the more strongly the planet is rimmed in amber.
   const speculationShell = makeSphere(
-    TRAPPIST_1.planetRadiusM * 1.02,
+    context.radiusM * 1.035,
     new THREE.MeshBasicMaterial({
       color: 0xffb454,
       transparent: true,
@@ -136,16 +178,15 @@ export function buildScene(): Scene {
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }),
-    64,
+    48,
   );
+  speculationShell.renderOrder = 11;
   three.add(speculationShell);
 
   // ── Lighting ──────────────────────────────────────────────────────────────────────────
-  // Physically scaled: an M-dwarf world is genuinely dim, and cheating that would throw
-  // away one of the few things the data tells us directly.
   const starLight = new THREE.PointLight(starColour, 1, 0, 0);
   three.add(starLight);
-  three.add(new THREE.AmbientLight(starColour, 0.02));
+  three.add(new THREE.AmbientLight(starColour, 0.03));
 
   return {
     three,
@@ -155,30 +196,32 @@ export function buildScene(): Scene {
     star,
     planet,
     starLight,
+    starfield,
+    atmosphere,
     speculationShell,
+    terrain,
+    context,
   };
 }
 
 /**
  * Apply an evidence profile to the scene.
  *
- * Two visible consequences, both honest: the amber rim strengthens as the envelope widens,
- * and the surface desaturates toward a neutral grey when there is little to constrain its
- * composition — because a confident colour would be a claim we cannot support.
+ * The amber rim strengthens as the envelope widens, and the surface desaturates toward a
+ * neutral grey when little constrains its composition — a confident colour would be a claim
+ * the data cannot support.
  */
 export function applyEvidence(scene: Scene, envelopeWidth: number): void {
   const shell = scene.speculationShell.material as THREE.MeshBasicMaterial;
-  shell.opacity = Math.min(0.5, envelopeWidth * 0.5);
+  shell.opacity = Math.min(0.42, envelopeWidth * 0.42);
 
   const surface = scene.planet.mesh.material as THREE.MeshStandardMaterial;
+  // Desaturate toward grey as certainty drops. Full colour is never claimed outright.
+  surface.color.setScalar(1);
   const constrained = 1 - envelopeWidth;
-  // Interpolate between a neutral unknown grey and a mineral-plausible tone.
-  const grey = new THREE.Color(0x6a6a6a);
-  const mineral = new THREE.Color(0x8a7358);
-  surface.color.copy(grey).lerp(mineral, constrained);
-}
-
-/** Altitude above the planet's surface, metres. Negative means below it. */
-export function altitudeAboveSurface(cameraRelativeToPlanet: THREE.Vector3, radiusM: number): number {
-  return cameraRelativeToPlanet.length() - radiusM;
+  surface.color.setRGB(
+    0.55 + constrained * 0.45,
+    0.55 + constrained * 0.42,
+    0.55 + constrained * 0.38,
+  );
 }

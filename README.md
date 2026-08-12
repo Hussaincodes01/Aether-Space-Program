@@ -202,13 +202,28 @@ Working today:
 - ✅ Physics registry — equilibrium temperature, insolation, density, gravity, escape
   velocity, scale height, Jeans parameter, Kopparapu habitable zone, blackbody colour
 - ✅ Three-layer contract with structurally enforced LLM containment
-- ✅ Terrain operator registry with physics admissibility gates
+- ✅ Terrain operators with physics gates **and height evaluation** — craters with rims and
+  ejecta, shield volcanoes on flood-basalt provinces, fracture networks, transverse dune
+  fields, dendritic valley incision, ice caps that follow the actual cold trap
+- ✅ Displaced planet geometry with computed normals and physics-driven surface colour
+- ✅ Rayleigh/Mie atmospheric scattering, coefficients derived from mean molecular weight
+- ✅ Star field with a realistic luminosity function and true blackbody colours
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
-- ✅ Three.js client flying 1 AU → surface
-- ✅ **102 tests**, including the two merge gates the PRD requires
+- ✅ **121 tests**, including the two merge gates the PRD requires
 
-Not built yet: real archive ingestion, cube-sphere LOD terrain, atmospheric scattering,
-retrieval ML, the hypothesis ensemble UI, and the game layer. See the PRD for sequencing.
+Not built yet: real archive ingestion, chunked LOD for close approach, retrieval ML, the
+hypothesis ensemble UI, and the game layer. See the PRD for sequencing.
+
+### About that terrain
+
+Earth's entire relief — Everest to the Mariana Trench — is about 20 km on a 6371 km radius.
+**That is 0.3%.** At true scale a terrestrial planet is smoother than a billiard ball, and
+every "realistic" planet you have seen rendered is vertically exaggerated, usually by one to
+two orders of magnitude, silently.
+
+Aether exaggerates too, because a perfect sphere teaches nothing. The difference is that the
+multiplier is a `VisualSpec` value, it is displayed in the HUD next to the true relief, and
+setting it to `1` shows you the honest answer.
 
 **Known limitation, recorded rather than hidden:** the terrain operator set does not yet
 model the consequences of tidal locking, so Earth and TRAPPIST-1e compile to the most

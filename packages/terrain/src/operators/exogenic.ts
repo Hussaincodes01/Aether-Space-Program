@@ -8,6 +8,23 @@
  */
 
 import { defineOperator } from "../registry.js";
+import { frequencyForScale } from "../evaluate.js";
+import { fbm, ridged, smoothstep, worley3 } from "../noise.js";
+
+/**
+ * One crater's radial profile, normalised so the rim sits at r = 1.
+ *
+ * A bowl alone reads as a dent. Real craters are recognisable because of the raised rim and
+ * the ejecta blanket outside it, so the profile is a parabolic depression plus a Gaussian
+ * ring plus a decaying skirt.
+ */
+function craterProfile(r: number): number {
+  if (r > 2.2) return 0;
+  const bowl = r < 1 ? -(1 - r * r) : 0;
+  const rim = Math.exp(-(((r - 0.94) / 0.11) ** 2)) * 0.55;
+  const ejecta = r > 1 ? Math.exp(-(((r - 1) / 0.7) ** 2)) * 0.12 : 0;
+  return bowl + rim + ejecta;
+}
 
 /**
  * Minimum surface pressure for aeolian transport.
@@ -57,6 +74,32 @@ export const impactPopulation = defineOperator({
       confidence: 0.4,
     };
   },
+  /**
+   * Two crater populations, large and small.
+   *
+   * Impactor size-frequency distributions are steep power laws: small craters vastly
+   * outnumber large ones. A single Worley layer gives every crater the same size and reads
+   * as golf-ball dimpling, so we superimpose a sparse large population on a dense small one.
+   */
+  evaluate: ({ dir, params, seed, radiusM }) => {
+    const largestKm = params.largestCraterKm ?? 120;
+    const density = params.density ?? 0.4;
+    const freshness = 1 - (params.degradation ?? 0.3);
+
+    let total = 0;
+    // Depth-to-diameter for fresh simple craters is roughly 1:5, shallower once degraded.
+    for (const [scaleKm, weight] of [
+      [largestKm, 1],
+      [largestKm / 4.5, 0.45],
+    ] as const) {
+      const freq = frequencyForScale(scaleKm, radiusM);
+      const { f1 } = worley3(dir.x * freq, dir.y * freq, dir.z * freq, seed + scaleKm);
+      const depthM = scaleKm * 1000 * 0.12;
+      total += craterProfile(f1 / 0.5) * depthM * weight;
+    }
+
+    return total * density * freshness;
+  },
 });
 
 export const aeolianTransport = defineOperator({
@@ -98,6 +141,25 @@ export const aeolianTransport = defineOperator({
       confidence: 0.25,
     };
   },
+  /**
+   * Transverse dune fields.
+   *
+   * The vertical axis is compressed before sampling, which stretches the noise into
+   * roughly east-west bands — dunes form perpendicular to the prevailing wind, and on a
+   * rotating body that wind is zonal. Sediment also collects in low ground, so the field
+   * fades out over highlands.
+   */
+  evaluate: ({ dir, params, seed, radiusM, heightSoFarM }) => {
+    const wavelengthKm = Math.max((params.wavelengthM ?? 400) / 1000, 0.05);
+    const freq = frequencyForScale(wavelengthKm, radiusM);
+
+    // Compressing y stretches features along latitude lines.
+    const n = fbm(dir.x * freq, dir.y * freq * 0.22, dir.z * freq, seed, { octaves: 3 });
+    const ripple = Math.abs(Math.sin(n * Math.PI * 3));
+
+    const lowland = smoothstep(900, -400, heightSoFarM);
+    return ripple * (params.duneHeightM ?? 0) * (params.coverage ?? 0) * lowland;
+  },
 });
 
 export const fluvialErosion = defineOperator({
@@ -130,6 +192,20 @@ export const fluvialErosion = defineOperator({
       confidence: 0.25,
     };
   },
+  /**
+   * Dendritic valley incision.
+   *
+   * Ridged noise inverted into channels, gated on elevation because water runs downhill:
+   * there is no drainage network below the datum, and incision deepens with the relief
+   * available to cut into.
+   */
+  evaluate: ({ dir, params, seed, radiusM, heightSoFarM }) => {
+    const freq = frequencyForScale(70, radiusM);
+    const r = ridged(dir.x * freq, dir.y * freq, dir.z * freq, seed, { octaves: 5 });
+    const channel = smoothstep(0.72, 1.0, r);
+    const highland = smoothstep(0, 1600, heightSoFarM);
+    return -channel * (params.incisionM ?? 0) * (params.networkDensity ?? 0) * highland;
+  },
 });
 
 export const glacialErosion = defineOperator({
@@ -158,5 +234,30 @@ export const glacialErosion = defineOperator({
       intensityRange: [0.02, extent],
       confidence: 0.3,
     };
+  },
+  /**
+   * Ice accumulation and glacial scour.
+   *
+   * The climate axis is the interesting part. On a rotating world the cold trap is polar,
+   * so extent follows latitude. On a tidally locked world it is the antistellar point, so
+   * extent follows the substellar angle and the cap is a hemisphere rather than two poles.
+   * The same operator, two very different-looking worlds, decided by physics upstream.
+   */
+  evaluate: ({ params, seed, dir, radiusM, latitude, substellarAngle, tidallyLocked }) => {
+    const climate = tidallyLocked
+      ? substellarAngle / Math.PI
+      : Math.abs(latitude) / (Math.PI / 2);
+
+    const extent = params.capExtent ?? 0.15;
+    const cold = smoothstep(1 - extent * 1.8, 1 - extent * 0.3, climate);
+    if (cold <= 0) return 0;
+
+    const scour = params.scourDepthM ?? 0;
+    // Ice piles up in the cap interior; the margin is where scour cuts hardest.
+    const margin = 4 * cold * (1 - cold);
+    const freq = frequencyForScale(180, radiusM);
+    const roughness = fbm(dir.x * freq, dir.y * freq, dir.z * freq, seed, { octaves: 3 });
+
+    return cold * scour * 0.6 - margin * scour * 0.35 + roughness * scour * 0.15 * cold;
   },
 });

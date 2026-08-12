@@ -114,8 +114,19 @@ function frame(now: number): void {
     const rel = cameraRelative(camera, body.frame);
     body.mesh.position.set(rel.x, rel.y, rel.z);
   }
-  // The speculation shell tracks the planet it wraps.
+  // Shells that wrap the planet track it.
   scene.speculationShell.position.copy(scene.planet.mesh.position);
+  if (scene.atmosphere) {
+    scene.atmosphere.mesh.position.copy(scene.planet.mesh.position);
+    scene.atmosphere.setPlanetCentre(scene.planet.mesh.position);
+    // Direction from the planet toward the star, for the scattering integral.
+    scene.atmosphere.setSunDirection(
+      new THREE.Vector3().subVectors(scene.star.mesh.position, scene.planet.mesh.position),
+    );
+  }
+  // The star shell sits at effective infinity, so it rides with the camera rather than
+  // being left behind — parallax over a few AU is far below one pixel at 4e17 m.
+  scene.starfield.position.set(0, 0, 0);
 
   // The light sits at the star, camera-relative like everything else.
   const starRel = cameraRelative(camera, scene.star.frame);
@@ -140,6 +151,8 @@ function frame(now: number): void {
     localPositionMagnitudeM: vecLength(camera.position),
     rebasedThisFrame: rebased,
     speculationFraction: currentEnvelopeWidth,
+    terrainExaggeration: scene.terrain.exaggeration,
+    reliefM: scene.terrain.reliefM.maxM - scene.terrain.reliefM.minM,
   });
 
   requestAnimationFrame(frame);
