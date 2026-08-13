@@ -40,6 +40,7 @@ import { createTerrainBuilder } from "./planet-mesh.js";
 import { createAtmosphere, scaleHeight, type AtmosphereShell } from "./atmosphere.js";
 import { createStarfield } from "./starfield.js";
 import { createDeepSkyLayer } from "./deepsky-layer.js";
+import { createExoplanetLayer } from "./exoplanet-layer.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
 import { createMissionPanel } from "./mission-panel.js";
@@ -70,6 +71,11 @@ scene.three.add(starfield.points);
 // The deep sky: 12,160 galaxies, clusters and nebulae, most at real derived distances.
 const deepSky = createDeepSkyLayer();
 scene.three.add(deepSky.points);
+
+// Every confirmed planetary system, at its true distance. ~4,700 of the 109,000 stars in
+// the field are known to have planets, and picking them out is the point of the layer.
+const exoplanets = createExoplanetLayer();
+scene.three.add(exoplanets.points);
 
 const threeCamera = new THREE.PerspectiveCamera(
   60,
@@ -241,6 +247,7 @@ function frame(now: number): void {
   // Star positions are stored relative to the Sun, so the whole field rides with it.
   starfield.update(sunRel);
   deepSky.update(sunRel);
+  exoplanets.update(sunRel);
   const sunDistance = sunRel.length();
   scene.sunLight.intensity = Math.max(sunDistance * sunDistance * 1e-6, 1);
 
@@ -275,6 +282,9 @@ function frame(now: number): void {
     vertexCount: nearest?.entry.terrain?.vertexCount ?? 0,
     refining: building !== null,
     starCount: starfield.count,
+    exoSystemCount: exoplanets.systemCount,
+    exoPlanetCount: exoplanets.planetCount,
+    exoSpeculation: exoplanets.meanSpeculation,
     deepSkyCount: deepSky.count,
     deepSkyWithoutDistance: deepSky.withoutDistance,
     starsComplete: starfield.complete,

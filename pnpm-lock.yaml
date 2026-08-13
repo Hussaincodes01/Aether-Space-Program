@@ -26,6 +26,9 @@ importers:
       '@aether/deepsky':
         specifier: workspace:*
         version: link:../../packages/deepsky
+      '@aether/exoplanets':
+        specifier: workspace:*
+        version: link:../../packages/exoplanets
       '@aether/missions':
         specifier: workspace:*
         version: link:../../packages/missions
@@ -65,6 +68,12 @@ importers:
         version: link:../units
 
   packages/deepsky:
+    dependencies:
+      '@aether/units':
+        specifier: workspace:*
+        version: link:../units
+
+  packages/exoplanets:
     dependencies:
       '@aether/units':
         specifier: workspace:*

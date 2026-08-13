@@ -150,6 +150,7 @@ apps/
   web/            Three.js client — the only package that knows about rendering
 
 packages/
+  exoplanets/     Every confirmed system, mapped, with priors for what was never measured
   deepsky/        Galaxies, clusters and nebulae (OpenNGC) + derived distances
   stars/          Real star catalogue (HYG) + physical photometry
   solar-system/   Real J2000 elements, Keplerian mechanics, the terrain validation path
@@ -277,12 +278,15 @@ Working today:
   Gliese) — the same catalogues OpenSpace draws on, under a redistributable licence
 - ✅ **Deep sky**: 12,160 galaxies, clusters and nebulae from OpenNGC, 10,568 at distances
   derived from redshift or parallax, coloured by emission physics
+- ✅ **Every confirmed exoplanet**: 6,309 planets in 4,722 systems from the NASA Exoplanet
+  Archive, mapped from Proxima Centauri at 1.30 pc to SWEEPS-11 at 8,500 pc, with a prior
+  chain filling what was never measured and labelling every fill
 - ✅ Live terrain generation on approach, released on departure, so memory stays bounded
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
 - ✅ Off-thread terrain generation with progressive refinement — a coarse world appears in
   ~20 ms, then sharpens to ~41k vertices without the tab ever freezing
 - ✅ Frame-rate-independent camera damping and look smoothing
-- ✅ **217 tests**, including the two merge gates the PRD requires and cost guards on
+- ✅ **244 tests**, including the two merge gates the PRD requires and cost guards on
   terrain evaluation
 
 Not built yet: real archive ingestion, chunked LOD for close approach, retrieval ML, the

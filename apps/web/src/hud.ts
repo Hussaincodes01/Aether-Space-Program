@@ -59,6 +59,10 @@ export interface HudData {
   /** Deep-sky objects loaded, and how many lack any measured distance. */
   deepSkyCount: number;
   deepSkyWithoutDistance: number;
+  /** Confirmed exoplanet systems and planets, and how much of them is inference. */
+  exoSystemCount: number;
+  exoPlanetCount: number;
+  exoSpeculation: number;
 }
 
 const row = (key: string, value: string, cls = "v"): string =>
@@ -112,6 +116,16 @@ export function renderHud(data: HudData): void {
         : `${data.starCount.toLocaleString()}${data.starsComplete ? "" : " (naked-eye)"}`,
       data.starsComplete ? "ok" : "warn",
     ),
+    data.exoSystemCount > 0
+      ? row(
+          "exoplanets",
+          `${data.exoPlanetCount.toLocaleString()} in ${data.exoSystemCount.toLocaleString()} systems`,
+          "ok",
+        )
+      : "",
+    data.exoSystemCount > 0
+      ? row("catalogue inferred", `${(data.exoSpeculation * 100).toFixed(0)}%`, "warn")
+      : "",
     data.deepSkyCount > 0
       ? row(
           "deep sky",
