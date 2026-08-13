@@ -48,6 +48,7 @@ import {
   type ExoSystem,
 } from "./exo-system.js";
 import { createInterstellarMap } from "./interstellar-map.js";
+import { createProvenancePanel } from "./provenance-panel.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
 import { createMissionPanel } from "./mission-panel.js";
@@ -180,9 +181,57 @@ exoplanets.onReady(() => {
   }
 });
 
+// ── Provenance inspector ────────────────────────────────────────────────────────────────
+
+const provenance = createProvenancePanel();
+document.body.appendChild(provenance.element);
+
+/**
+ * Point the inspector at whatever the camera is nearest.
+ *
+ * Called on demand rather than every frame: compiling a terrain program to enumerate its
+ * gates is cheap but not free, and nothing about it changes between keypresses.
+ */
+function inspectNearest(): void {
+  if (activeSystem && exoNearestName) {
+    const body = activeSystem.planets.find((p) => p.name === exoNearestName);
+    if (body) {
+      provenance.show({
+        name: body.name,
+        subtitle:
+          `${activeSystem.name} · ${(activeSystem.distancePc * 3.26156).toFixed(1)} ly from Earth`,
+        resolved: body.resolved,
+        context: body.context,
+        seed: `sha256:${body.name}:v1`,
+        speculation: Math.max(body.speculation, currentEnvelopeWidth),
+      });
+      return;
+    }
+  }
+
+  // Solar System bodies are measured rather than resolved from a catalogue, so there is no
+  // prior chain to show — but the terrain gates still apply, and they are the interesting
+  // part here because these are the worlds we can check against a map.
+  const entry = nearestEntry;
+  if (entry) {
+    provenance.show({
+      name: entry.data.name,
+      subtitle: entry.data.blurb,
+      resolved: null,
+      context: terrainContextFor(entry.data.id) ?? null,
+      seed: `sha256:${entry.data.id}:v1`,
+      speculation: currentEnvelopeWidth,
+    });
+  }
+}
+
 // Home returns to the Solar System — the one place with ground truth to check against.
 window.addEventListener("keydown", (event) => {
   if (event.code === "Home") returnToSolarSystem();
+  if (event.code === "KeyI") {
+    if (provenance.visible) provenance.hide();
+    else inspectNearest();
+  }
 });
 
 // ── Live terrain ────────────────────────────────────────────────────────────────────────
@@ -266,6 +315,9 @@ const TERRAIN_EXAGGERATION = 25;
 // ── Loop ────────────────────────────────────────────────────────────────────────────────
 
 const distances = new Map<string, number>();
+/** Nearest body each frame, so the inspector can be opened without re-deriving it. */
+let exoNearestName: string | null = null;
+let nearestEntry: SceneBody | null = null;
 let lastTime = performance.now();
 let smoothedFps = 60;
 
@@ -328,6 +380,8 @@ function frame(now: number): void {
 
   const nearest = nearestBody(scene, distances);
   const altitudeM = activeSystem ? exoAltitudeM : (nearest?.altitudeM ?? 1e9);
+  exoNearestName = exoNearest?.name ?? null;
+  nearestEntry = nearest?.entry ?? null;
 
   // 3. Camera, then rebase with hysteresis so a hovering camera cannot flip frames.
   controls.update(camera, threeCamera, altitudeM, dt);

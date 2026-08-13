@@ -74,6 +74,78 @@
         background: rgba(6, 10, 20, 0.8);
       }
 
+      /* ── Provenance inspector ── */
+      #provenance {
+        position: fixed; top: 16px; right: 362px; bottom: 56px; width: 340px;
+        z-index: 21; overflow-y: auto; padding: 16px 18px;
+        background: rgba(6, 10, 20, 0.94);
+        border: 1px solid rgba(120, 170, 255, 0.28);
+        border-radius: 8px; backdrop-filter: blur(10px);
+        scrollbar-width: thin; scrollbar-color: rgba(120,170,255,0.3) transparent;
+      }
+      #provenance h1 { font-size: 15px; color: #eaf3ff; font-weight: 600; }
+      #provenance .pv-sub {
+        color: #8ba4c9; font-size: 11px; margin-bottom: 12px;
+        padding-bottom: 10px; border-bottom: 1px solid rgba(120, 170, 255, 0.16);
+      }
+      #provenance h2 {
+        font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: #6f8ab5; font-weight: 600; margin: 16px 0 8px;
+      }
+      #provenance h3 {
+        font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+        color: #56709a; font-weight: 600; margin: 12px 0 6px;
+      }
+      .pv-summary { margin-bottom: 6px; }
+      .pv-meter {
+        height: 4px; border-radius: 2px; margin-bottom: 6px;
+        background: rgba(255, 180, 84, 0.22); overflow: hidden;
+      }
+      .pv-fill { height: 100%; background: #5ea8ff; }
+      .pv-row-inline {
+        display: flex; justify-content: space-between;
+        font-size: 11px; color: #8ba4c9;
+      }
+      .pv-warn { color: #ffb454; }
+
+      .pv-row {
+        padding: 7px 0; border-bottom: 1px solid rgba(120, 170, 255, 0.08);
+      }
+      .pv-head { display: flex; justify-content: space-between; gap: 12px; }
+      .pv-label { color: #b6cdf0; font-size: 12px; }
+      .pv-value { color: #eaf3ff; font-size: 12px; font-variant-numeric: tabular-nums; }
+      .pv-meta { display: flex; gap: 8px; align-items: center; margin-top: 3px; flex-wrap: wrap; }
+      .pv-badge { font-size: 10px; border-radius: 3px; padding: 1px 5px; }
+      .ev-measured { color: #5ee0ff; border: 1px solid rgba(94, 224, 255, 0.35); }
+      .ev-derived  { color: #7ee081; border: 1px solid rgba(126, 224, 129, 0.35); }
+      .ev-prior    { color: #ffb454; border: 1px solid rgba(255, 180, 84, 0.35); }
+      .ev-default  { color: #8ba4c9; border: 1px dashed rgba(139, 164, 201, 0.4); }
+      .pv-conf { font-size: 10px; color: #6f8ab5; }
+      .pv-scatter { font-size: 10px; color: #ffb454; }
+      .pv-formula {
+        font-size: 10px; color: #56709a; margin-top: 3px;
+        font-family: ui-monospace, Menlo, monospace;
+      }
+      .pv-note { font-size: 11px; color: #8ba4c9; margin-top: 4px; line-height: 1.45; }
+      .pv-caveat {
+        font-size: 11px; color: #ffb454; line-height: 1.45; margin-bottom: 10px;
+        padding: 8px; border-radius: 5px;
+        background: rgba(255, 180, 84, 0.07);
+        border: 1px solid rgba(255, 180, 84, 0.2);
+      }
+      .pv-op { padding: 6px 0; border-bottom: 1px solid rgba(120, 170, 255, 0.07); }
+      .pv-op-off { opacity: 0.62; }
+      .pv-op-head { display: flex; justify-content: space-between; gap: 10px; }
+      .pv-op-name { color: #d8e8ff; font-size: 12px; text-transform: capitalize; }
+      .pv-absent { font-size: 10px; color: #8ba4c9; }
+      .pv-op-why { font-size: 11px; color: #8ba4c9; margin-top: 3px; line-height: 1.45; }
+      .pv-empty { color: #6f8ab5; font-size: 12px; line-height: 1.5; }
+      .pv-empty b { color: #d8e8ff; }
+      .pv-legend {
+        display: flex; flex-wrap: wrap; gap: 5px; margin-top: 16px;
+        padding-top: 12px; border-top: 1px solid rgba(120, 170, 255, 0.16);
+      }
+
       /* ── Interstellar map ── */
       #starmap {
         position: fixed; top: 16px; left: 16px; bottom: 56px; width: 300px;
@@ -193,7 +265,7 @@
     <div id="hud"></div>
     <div id="help">
       <b>W A S D</b> move &nbsp; <b>R / F</b> up / down &nbsp; <b>Shift</b> boost &nbsp;
-      <b>Wheel</b> throttle &nbsp; <b>Esc</b> release mouse &nbsp; <b>Home</b> back to the Solar System
+      <b>Wheel</b> throttle &nbsp; <b>Esc</b> release mouse &nbsp; <b>Home</b> back to the Solar System &nbsp; <b>I</b> provenance
       <p>
         You start in low Earth orbit. Every planet is on its real Keplerian orbit at today's
         date. Pick any of 4,722 confirmed systems from the map on the left to travel there —

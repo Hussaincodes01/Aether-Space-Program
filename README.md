@@ -284,6 +284,9 @@ Working today:
 - ✅ **Interstellar travel**: search any of the 4,722 systems and go there. The system is
   built on arrival — real orbits, terrain generated live from real parameters — and torn
   down on departure
+- ✅ **Provenance inspector** (press `I`): every value with its evidence class, confidence,
+  formula and caveat — and *why absent features are absent*, straight from the gate that
+  refused them
 - ✅ Live terrain generation on approach, released on departure, so memory stays bounded
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
 - ✅ Off-thread terrain generation with progressive refinement — a coarse world appears in
