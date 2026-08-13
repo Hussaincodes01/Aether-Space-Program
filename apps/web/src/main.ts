@@ -32,6 +32,7 @@ import {
   buildSolarScene,
   nearestBody,
   releaseTerrain,
+  hasSurfaceMap,
   terrainContextFor,
   updateOrbits,
   type SceneBody,
@@ -225,12 +226,67 @@ function inspectNearest(): void {
   }
 }
 
+// ── Panel visibility ────────────────────────────────────────────────────────────────────
+
+/**
+ * Every panel can be hidden.
+ *
+ * Four panels at 300-340px each leave almost no canvas on a laptop, and flying somewhere
+ * while looking through a letterbox is miserable. `U` clears everything; the individual
+ * keys toggle one at a time.
+ */
+const panels = {
+  starmap: starMap.element,
+  missions: missionPanel.element,
+  provenance: provenance.element,
+  hud: document.getElementById("hud"),
+  help: document.getElementById("help"),
+};
+
+let uiHidden = false;
+
+function setPanel(el: HTMLElement | null, visible: boolean): void {
+  if (el) el.style.display = visible ? "" : "none";
+}
+
+function toggleAllUi(): void {
+  uiHidden = !uiHidden;
+  setPanel(panels.starmap, !uiHidden);
+  setPanel(panels.missions, !uiHidden);
+  setPanel(panels.hud, !uiHidden);
+  setPanel(panels.help, !uiHidden);
+  if (uiHidden) provenance.hide();
+}
+
+function togglePanel(el: HTMLElement | null): void {
+  if (!el) return;
+  el.style.display = el.style.display === "none" ? "" : "none";
+}
+
 // Home returns to the Solar System — the one place with ground truth to check against.
 window.addEventListener("keydown", (event) => {
-  if (event.code === "Home") returnToSolarSystem();
-  if (event.code === "KeyI") {
-    if (provenance.visible) provenance.hide();
-    else inspectNearest();
+  // Ignore shortcuts while typing in the system search box.
+  if ((event.target as HTMLElement)?.tagName === "INPUT") return;
+
+  switch (event.code) {
+    case "Home":
+      returnToSolarSystem();
+      break;
+    case "KeyI":
+      if (provenance.visible) provenance.hide();
+      else inspectNearest();
+      break;
+    case "KeyU":
+      toggleAllUi();
+      break;
+    case "KeyM":
+      togglePanel(panels.missions);
+      break;
+    case "KeyK":
+      togglePanel(panels.starmap);
+      break;
+    default:
+      break;
   }
 });
 
@@ -312,6 +368,15 @@ function detachAtmosphere(): void {
 
 const TERRAIN_EXAGGERATION = 25;
 
+/**
+ * Freeze orbital motion and body rotation.
+ *
+ * Requested while navigation is being sorted out: a moving target is hard to fly to, and
+ * rotation makes it hard to tell whether the camera is drifting or the planet is. Positions
+ * remain the real ones for the scene's epoch.
+ */
+const FROZEN = true;
+
 // ── Loop ────────────────────────────────────────────────────────────────────────────────
 
 const distances = new Map<string, number>();
@@ -333,16 +398,22 @@ function frame(now: number): void {
   lastTime = now;
   smoothedFps = smoothedFps * 0.92 + (1 / Math.max(dt, 1e-4)) * 0.08;
 
-  // 1. Real orbital motion — in the Solar System, and in whichever system we are visiting.
-  updateOrbits(scene, scene.timeS + dt * scene.timeScale);
-  if (activeSystem) updateExoSystem(activeSystem, scene.timeS);
+  // 1. Motion is frozen for now, by request. Positions are still the real ones for the
+  //    epoch the scene was built at — the planets simply do not advance along their orbits,
+  //    and nothing spins. Everything below still resolves through the same f64 path, so
+  //    turning motion back on is a one-line change rather than a rewrite.
+  if (!FROZEN) {
+    updateOrbits(scene, scene.timeS + dt * scene.timeScale);
+    if (activeSystem) updateExoSystem(activeSystem, scene.timeS);
+  }
 
   // 2. Resolve every body relative to the camera, in f64, and record surface distances.
   distances.clear();
   for (const entry of scene.bodies.values()) {
     const rel = cameraRelative(camera, entry.frame);
     entry.mesh.position.set(rel.x, rel.y, rel.z);
-    entry.mesh.quaternion.copy(bodyOrientation(entry.data, scene.timeS));
+    // Axial tilt is kept — it is measured — but the spin term is frozen at zero.
+    entry.mesh.quaternion.copy(bodyOrientation(entry.data, FROZEN ? 0 : scene.timeS));
 
     if (entry.orbitLine) {
       const parent = scene.bodies.get(entry.data.parentId ?? "sun");
@@ -384,7 +455,9 @@ function frame(now: number): void {
   nearestEntry = nearest?.entry ?? null;
 
   // 3. Camera, then rebase with hysteresis so a hovering camera cannot flip frames.
-  controls.update(camera, threeCamera, altitudeM, dt);
+  // The flight model wants distance to the nearest *surface*: it sets the throttle
+  // ceiling so you can always cross the gap ahead in about half a second.
+  controls.update(camera, threeCamera, Math.max(altitudeM, 1), dt);
   const rebased = maybeRebase(camera, scene.universe, { enterFactor: 4, exitFactor: 8 });
 
   // 4. Generate terrain on approach; release it on departure.
@@ -422,7 +495,9 @@ function frame(now: number): void {
     }
   }
 
-  if (!activeSystem && nearest) {
+  // Solar System bodies keep their measured maps: generating terrain over real imagery
+  // would replace data with invention on the one set of worlds we can actually check.
+  if (!activeSystem && nearest && !hasSurfaceMap(nearest.entry.data.id)) {
     const radii = nearest.altitudeM / nearest.entry.data.radiusM;
     if (radii < TERRAIN_ENTER_RADII) requestTerrain(nearest.entry);
   }
@@ -468,8 +543,8 @@ function frame(now: number): void {
         `${activeSystem.planets.length} planets · press Home to return`
       : (nearest?.entry.data.blurb ?? ""),
     distanceToStarM: sunDistance,
-    speedMs: 0,
-    throttle: controls.state.throttle,
+    throttle: controls.state.speedMs,
+    speedMs: controls.state.actualSpeedMs,
     fps: smoothedFps,
     localPositionMagnitudeM: vecLength(camera.position),
     rebasedThisFrame: rebased,

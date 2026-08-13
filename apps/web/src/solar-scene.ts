@@ -66,14 +66,48 @@ export interface SolarScene {
 export const TERRAIN_ENTER_RADII = 14;
 export const TERRAIN_EXIT_RADII = 30;
 
-function placeholderSphere(body: SolarBody): THREE.Mesh {
-  const geometry = new THREE.SphereGeometry(1, 48, 24);
+/**
+ * Shared loader, so ten textures do not open ten independent decode pipelines.
+ */
+const textureLoader = new THREE.TextureLoader();
+
+/**
+ * Bodies with a real, measured surface map.
+ *
+ * These get their actual imagery rather than generated terrain — which is the entire point
+ * of the Solar System here. It is the only place with ground truth, so it is the one place
+ * a procedural surface would be *wrong* rather than merely unverifiable. Putting invented
+ * geography on Mars would discard the comparison that makes the generator testable at all.
+ *
+ * See `public/textures/ATTRIBUTION.md`: Earth and the Moon are NASA public domain, the rest
+ * are Solar System Scope under CC BY 4.0.
+ */
+const SURFACE_MAPS = new Set([
+  "sun", "mercury", "venus", "earth", "moon",
+  "mars", "jupiter", "saturn", "uranus", "neptune",
+]);
+
+export function hasSurfaceMap(bodyId: string): boolean {
+  return SURFACE_MAPS.has(bodyId);
+}
+
+function bodySphere(body: SolarBody): THREE.Mesh {
+  // 96x48 rather than 48x24: an equirectangular map on a coarse sphere shows visible
+  // faceting along the terminator, which is exactly where the eye is drawn.
+  const geometry = new THREE.SphereGeometry(1, 96, 48);
+
+  const map = SURFACE_MAPS.has(body.id)
+    ? textureLoader.load(`textures/${body.id}.jpg`)
+    : null;
+  if (map) map.colorSpace = THREE.SRGBColorSpace;
+
   const material =
     body.kind === "star"
-      ? new THREE.MeshBasicMaterial({ color: body.tintHex })
+      ? new THREE.MeshBasicMaterial({ color: map ? 0xffffff : body.tintHex, map })
       : new THREE.MeshStandardMaterial({
-          color: body.tintHex,
-          roughness: 0.9,
+          color: map ? 0xffffff : body.tintHex,
+          map,
+          roughness: 0.92,
           metalness: 0.02,
         });
 
@@ -110,7 +144,7 @@ export function buildSolarScene(startTimeS = 0): SolarScene {
   const bodies = new Map<string, SceneBody>();
 
   for (const data of SOLAR_SYSTEM) {
-    const mesh = placeholderSphere(data);
+    const mesh = bodySphere(data);
     three.add(mesh);
 
     const frame =
