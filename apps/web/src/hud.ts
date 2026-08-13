@@ -56,6 +56,9 @@ export interface HudData {
   /** Stars currently uploaded from the real catalogue. */
   starCount: number;
   starsComplete: boolean;
+  /** Deep-sky objects loaded, and how many lack any measured distance. */
+  deepSkyCount: number;
+  deepSkyWithoutDistance: number;
 }
 
 const row = (key: string, value: string, cls = "v"): string =>
@@ -109,6 +112,12 @@ export function renderHud(data: HudData): void {
         : `${data.starCount.toLocaleString()}${data.starsComplete ? "" : " (naked-eye)"}`,
       data.starsComplete ? "ok" : "warn",
     ),
+    data.deepSkyCount > 0
+      ? row(
+          "deep sky",
+          `${data.deepSkyCount.toLocaleString()} (${data.deepSkyWithoutDistance.toLocaleString()} no distance)`,
+        )
+      : "",
     data.rebasedThisFrame ? row("", "rebased", "ok") : "",
   ].join("");
 }

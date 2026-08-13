@@ -39,6 +39,7 @@ import {
 import { createTerrainBuilder } from "./planet-mesh.js";
 import { createAtmosphere, scaleHeight, type AtmosphereShell } from "./atmosphere.js";
 import { createStarfield } from "./starfield.js";
+import { createDeepSkyLayer } from "./deepsky-layer.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
 import { createMissionPanel } from "./mission-panel.js";
@@ -65,6 +66,10 @@ const scene = buildSolarScene(secondsSinceJ2000(new Date()));
 // The real sky: 109k stars at measured parallax distances. Loads progressively.
 const starfield = createStarfield();
 scene.three.add(starfield.points);
+
+// The deep sky: 12,160 galaxies, clusters and nebulae, most at real derived distances.
+const deepSky = createDeepSkyLayer();
+scene.three.add(deepSky.points);
 
 const threeCamera = new THREE.PerspectiveCamera(
   60,
@@ -235,6 +240,7 @@ function frame(now: number): void {
   scene.sunLight.position.copy(sunRel);
   // Star positions are stored relative to the Sun, so the whole field rides with it.
   starfield.update(sunRel);
+  deepSky.update(sunRel);
   const sunDistance = sunRel.length();
   scene.sunLight.intensity = Math.max(sunDistance * sunDistance * 1e-6, 1);
 
@@ -269,6 +275,8 @@ function frame(now: number): void {
     vertexCount: nearest?.entry.terrain?.vertexCount ?? 0,
     refining: building !== null,
     starCount: starfield.count,
+    deepSkyCount: deepSky.count,
+    deepSkyWithoutDistance: deepSky.withoutDistance,
     starsComplete: starfield.complete,
     simulationDate: new Date(Date.UTC(2000, 0, 1, 12) + scene.timeS * 1000),
     timeScale: scene.timeScale,

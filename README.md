@@ -150,6 +150,7 @@ apps/
   web/            Three.js client — the only package that knows about rendering
 
 packages/
+  deepsky/        Galaxies, clusters and nebulae (OpenNGC) + derived distances
   stars/          Real star catalogue (HYG) + physical photometry
   solar-system/   Real J2000 elements, Keplerian mechanics, the terrain validation path
   terrain/        Terrain operators + physics admissibility gates + program compilation
@@ -274,12 +275,14 @@ Working today:
   Kepler equation, validated against published periods and distances
 - ✅ **Real sky**: 109,389 stars at measured parallax distances from HYG (Hipparcos, Yale,
   Gliese) — the same catalogues OpenSpace draws on, under a redistributable licence
+- ✅ **Deep sky**: 12,160 galaxies, clusters and nebulae from OpenNGC, 10,568 at distances
+  derived from redshift or parallax, coloured by emission physics
 - ✅ Live terrain generation on approach, released on departure, so memory stays bounded
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
 - ✅ Off-thread terrain generation with progressive refinement — a coarse world appears in
   ~20 ms, then sharpens to ~41k vertices without the tab ever freezing
 - ✅ Frame-rate-independent camera damping and look smoothing
-- ✅ **186 tests**, including the two merge gates the PRD requires and cost guards on
+- ✅ **217 tests**, including the two merge gates the PRD requires and cost guards on
   terrain evaluation
 
 Not built yet: real archive ingestion, chunked LOD for close approach, retrieval ML, the

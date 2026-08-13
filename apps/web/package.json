@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@aether/coordinates": "workspace:*",
+    "@aether/deepsky": "workspace:*",
     "@aether/missions": "workspace:*",
     "@aether/physics": "workspace:*",
     "@aether/schema": "workspace:*",

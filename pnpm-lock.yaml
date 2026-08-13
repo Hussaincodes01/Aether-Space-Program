@@ -23,6 +23,9 @@ importers:
       '@aether/coordinates':
         specifier: workspace:*
         version: link:../../packages/coordinates
+      '@aether/deepsky':
+        specifier: workspace:*
+        version: link:../../packages/deepsky
       '@aether/missions':
         specifier: workspace:*
         version: link:../../packages/missions
@@ -56,6 +59,12 @@ importers:
         version: 6.4.3(@types/node@22.20.1)
 
   packages/coordinates:
+    dependencies:
+      '@aether/units':
+        specifier: workspace:*
+        version: link:../units
+
+  packages/deepsky:
     dependencies:
       '@aether/units':
         specifier: workspace:*
