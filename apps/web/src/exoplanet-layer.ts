@@ -45,6 +45,8 @@ export interface ExoplanetLayer {
   names: CatalogNames | null;
   /** Mean speculation across the catalogue — how much of it is inference rather than data. */
   meanSpeculation: number;
+  /** Fires once the catalogue has loaded, for UI that needs it. */
+  onReady: (listener: () => void) => void;
   update: (sunRelativeToCamera: THREE.Vector3) => void;
   /** Nearest system to a point given in parsecs from the Sun, for the HUD. */
   nearestTo: (positionPc: THREE.Vector3) => { index: number; name: string; distancePc: number } | null;
@@ -129,8 +131,14 @@ export function createExoplanetLayer(): ExoplanetLayer {
   // Between the star field and the deep sky.
   points.renderOrder = -900;
 
+  const readyListeners: Array<() => void> = [];
+
   const layer: ExoplanetLayer = {
     points,
+    onReady: (listener) => {
+      if (layer.systems) listener();
+      else readyListeners.push(listener);
+    },
     systemCount: 0,
     planetCount: 0,
     systems: null,
@@ -211,6 +219,7 @@ export function createExoplanetLayer(): ExoplanetLayer {
         }
       }
       layer.meanSpeculation = planets.count > 0 ? total / planets.count : 0;
+      for (const listener of readyListeners) listener();
     })
     .catch((error: unknown) => {
       console.warn("Exoplanet catalogue failed to load.", error);

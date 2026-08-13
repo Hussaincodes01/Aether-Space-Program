@@ -281,6 +281,9 @@ Working today:
 - ✅ **Every confirmed exoplanet**: 6,309 planets in 4,722 systems from the NASA Exoplanet
   Archive, mapped from Proxima Centauri at 1.30 pc to SWEEPS-11 at 8,500 pc, with a prior
   chain filling what was never measured and labelling every fill
+- ✅ **Interstellar travel**: search any of the 4,722 systems and go there. The system is
+  built on arrival — real orbits, terrain generated live from real parameters — and torn
+  down on departure
 - ✅ Live terrain generation on approach, released on departure, so memory stays bounded
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
 - ✅ Off-thread terrain generation with progressive refinement — a coarse world appears in

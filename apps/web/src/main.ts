@@ -41,6 +41,13 @@ import { createAtmosphere, scaleHeight, type AtmosphereShell } from "./atmospher
 import { createStarfield } from "./starfield.js";
 import { createDeepSkyLayer } from "./deepsky-layer.js";
 import { createExoplanetLayer } from "./exoplanet-layer.js";
+import {
+  buildExoSystem,
+  updateExoSystem,
+  type ExoPlanetBody,
+  type ExoSystem,
+} from "./exo-system.js";
+import { createInterstellarMap } from "./interstellar-map.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
 import { createMissionPanel } from "./mission-panel.js";
@@ -101,6 +108,81 @@ document.body.appendChild(missionPanel.element);
 let currentEnvelopeWidth = envelopeWidth(missionPanel.getProfile());
 missionPanel.onChange((profile) => {
   currentEnvelopeWidth = envelopeWidth(profile);
+  // Reconnected: changing the mission selection now changes what the world looks like,
+  // rather than only a number in the HUD.
+  applyEvidence();
+});
+
+// ── Interstellar travel ─────────────────────────────────────────────────────────────────
+
+const starMap = createInterstellarMap();
+document.body.appendChild(starMap.element);
+
+/** The exoplanet system the camera is currently inside, if any. */
+let activeSystem: ExoSystem | null = null;
+
+/**
+ * Drive the speculation rim from real catalogue completeness.
+ *
+ * This is where the mission panel and the exoplanet priors meet: the rim strengthens with
+ * whichever is *less* certain, so a thin mission selection and a poorly measured planet
+ * compound rather than cancel.
+ */
+function applyEvidence(): void {
+  const systemSpeculation = activeSystem?.speculation ?? 0;
+  const combined = Math.max(currentEnvelopeWidth, systemSpeculation);
+  const neutral = new THREE.Color(0.55, 0.54, 0.53);
+
+  for (const body of activeSystem?.planets ?? []) {
+    const material = body.mesh.material as THREE.MeshStandardMaterial;
+    const uncertainty = Math.max(combined, body.speculation);
+    // Desaturate toward neutral grey as certainty drops. A confident colour would be a
+    // claim the data cannot support.
+    material.color.lerp(neutral, Math.min(0.85, uncertainty));
+  }
+}
+
+function travelTo(systemIndex: number): void {
+  const { systems, planets, names } = exoplanets;
+  if (!systems || !planets || !names) return;
+
+  // Tear the previous system down. 4,722 systems resident at once would be ~30,000 frames
+  // for a scene that shows one.
+  activeSystem?.dispose();
+  activeSystem = buildExoSystem(
+    systemIndex, systems, planets, names, scene.universe, scene.three,
+  );
+
+  // Arrive a few orbital radii out from the innermost planet, so the system reads as a
+  // system rather than as a star with specks near it.
+  const inner = activeSystem.planets[0];
+  const standoff = inner
+    ? inner.elements.semiMajorAxisM * 2.2
+    : activeSystem.starRadiusM * 400;
+
+  camera.frame = activeSystem.frame;
+  camera.position = { x: standoff, y: standoff * 0.25, z: 0 };
+  applyEvidence();
+}
+
+function returnToSolarSystem(): void {
+  activeSystem?.dispose();
+  activeSystem = null;
+  camera.frame = earthEntry.frame;
+  camera.position = { x: EARTH.radiusM * 2.6, y: EARTH.radiusM * 0.6, z: 0 };
+  starMap.setCurrent(null);
+}
+
+starMap.onTravel(travelTo);
+exoplanets.onReady(() => {
+  if (exoplanets.systems && exoplanets.names) {
+    starMap.setCatalog(exoplanets.systems, exoplanets.names);
+  }
+});
+
+// Home returns to the Solar System — the one place with ground truth to check against.
+window.addEventListener("keydown", (event) => {
+  if (event.code === "Home") returnToSolarSystem();
 });
 
 // ── Live terrain ────────────────────────────────────────────────────────────────────────
@@ -199,8 +281,9 @@ function frame(now: number): void {
   lastTime = now;
   smoothedFps = smoothedFps * 0.92 + (1 / Math.max(dt, 1e-4)) * 0.08;
 
-  // 1. Real orbital motion.
+  // 1. Real orbital motion — in the Solar System, and in whichever system we are visiting.
   updateOrbits(scene, scene.timeS + dt * scene.timeScale);
+  if (activeSystem) updateExoSystem(activeSystem, scene.timeS);
 
   // 2. Resolve every body relative to the camera, in f64, and record surface distances.
   distances.clear();
@@ -220,15 +303,72 @@ function frame(now: number): void {
     distances.set(entry.data.id, Math.hypot(rel.x, rel.y, rel.z));
   }
 
+  // Exoplanet bodies, resolved camera-relative exactly like Solar System ones.
+  let exoAltitudeM = Infinity;
+  let exoNearest: ExoPlanetBody | null = null;
+
+  if (activeSystem) {
+    const starRel = cameraRelative(camera, activeSystem.starFrame);
+    activeSystem.starMesh.position.set(starRel.x, starRel.y, starRel.z);
+    activeSystem.starLight.position.copy(activeSystem.starMesh.position);
+    const starDistance = Math.hypot(starRel.x, starRel.y, starRel.z);
+    activeSystem.starLight.intensity = Math.max(starDistance * starDistance * 1e-6, 1);
+
+    for (const body of activeSystem.planets) {
+      const rel = cameraRelative(camera, body.frame);
+      body.mesh.position.set(rel.x, rel.y, rel.z);
+      body.orbitLine.position.copy(activeSystem.starMesh.position);
+      const altitude = Math.hypot(rel.x, rel.y, rel.z) - body.radiusM;
+      if (altitude < exoAltitudeM) {
+        exoAltitudeM = altitude;
+        exoNearest = body;
+      }
+    }
+  }
+
   const nearest = nearestBody(scene, distances);
-  const altitudeM = nearest?.altitudeM ?? 1e9;
+  const altitudeM = activeSystem ? exoAltitudeM : (nearest?.altitudeM ?? 1e9);
 
   // 3. Camera, then rebase with hysteresis so a hovering camera cannot flip frames.
   controls.update(camera, threeCamera, altitudeM, dt);
   const rebased = maybeRebase(camera, scene.universe, { enterFactor: 4, exitFactor: 8 });
 
   // 4. Generate terrain on approach; release it on departure.
-  if (nearest) {
+  if (exoNearest?.context && exoNearest.terrainState === "placeholder" && !building) {
+    const body = exoNearest;
+    // Captured before the closure: TypeScript cannot carry the narrowing from the guard
+    // above through into an async callback, and a non-null assertion would hide the reason.
+    const context = body.context;
+    if (context && exoAltitudeM / body.radiusM < TERRAIN_ENTER_RADII) {
+      building = body.name;
+      body.terrainState = "building";
+      terrainBuilder
+        .build({
+          context,
+          seed: `sha256:${body.name}:v1`,
+          subdivisions: 6,
+          terrainExaggeration: TERRAIN_EXAGGERATION,
+        })
+        .then((result) => {
+          body.mesh.geometry = result.geometry;
+          body.mesh.scale.setScalar(1);
+          const material = body.mesh.material as THREE.MeshStandardMaterial;
+          material.vertexColors = true;
+          material.color.setScalar(1);
+          material.needsUpdate = true;
+          body.terrainState = "detailed";
+          applyEvidence();
+        })
+        .catch(() => {
+          body.terrainState = "placeholder";
+        })
+        .finally(() => {
+          building = null;
+        });
+    }
+  }
+
+  if (!activeSystem && nearest) {
     const radii = nearest.altitudeM / nearest.entry.data.radiusM;
     if (radii < TERRAIN_ENTER_RADII) requestTerrain(nearest.entry);
   }
@@ -266,15 +406,20 @@ function frame(now: number): void {
     frameId: camera.frame.id,
     frameDepth: frameDepth(camera.frame),
     altitudeM,
-    nearestBodyName: nearest?.entry.data.name ?? "deep space",
-    nearestBodyBlurb: nearest?.entry.data.blurb ?? "",
+    nearestBodyName: activeSystem
+      ? (exoNearest?.name ?? activeSystem.name)
+      : (nearest?.entry.data.name ?? "deep space"),
+    nearestBodyBlurb: activeSystem
+      ? `${activeSystem.name} · ${(activeSystem.distancePc * 3.26156).toFixed(1)} ly · ` +
+        `${activeSystem.planets.length} planets · press Home to return`
+      : (nearest?.entry.data.blurb ?? ""),
     distanceToStarM: sunDistance,
     speedMs: 0,
     throttle: controls.state.throttle,
     fps: smoothedFps,
     localPositionMagnitudeM: vecLength(camera.position),
     rebasedThisFrame: rebased,
-    speculationFraction: currentEnvelopeWidth,
+    speculationFraction: Math.max(currentEnvelopeWidth, activeSystem?.speculation ?? 0),
     terrainExaggeration: TERRAIN_EXAGGERATION,
     reliefM: nearest?.entry.terrain
       ? nearest.entry.terrain.reliefM.maxM - nearest.entry.terrain.reliefM.minM
