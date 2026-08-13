@@ -86,11 +86,22 @@ scene.three.add(deepSky.points);
 const exoplanets = createExoplanetLayer();
 scene.three.add(exoplanets.points);
 
+/**
+ * Far plane large enough to contain the actual universe.
+ *
+ * The first value here was 1e15 m, which is inside the Oort cloud — every star (3e16 m and
+ * out), every exoplanet host, and the entire deep sky (1e24 m) was clipped away before it
+ * could be drawn. The scene rendered perfectly and showed nothing.
+ *
+ * The logarithmic depth buffer is what makes a range this absurd usable, and the point
+ * layers disable depth testing entirely, so the only geometry that actually needs depth
+ * precision is the handful of nearby bodies.
+ */
 const threeCamera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
   0.1,
-  1e15,
+  1e27,
 );
 threeCamera.position.set(0, 0, 0);
 
@@ -104,6 +115,11 @@ const camera = createCamera(earthEntry.frame, {
 
 const controls = createControls(canvas);
 renderWatermark();
+
+// Point at Earth. Without this the camera starts at its default heading, which puts the
+// planet ~90 degrees off-axis and outside a 60 degree field of view — you spawn in orbit
+// staring at empty space, which is exactly what it looked like.
+controls.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
 
 const missionPanel = createMissionPanel("today");
 document.body.appendChild(missionPanel.element);
@@ -164,6 +180,8 @@ function travelTo(systemIndex: number): void {
 
   camera.frame = activeSystem.frame;
   camera.position = { x: standoff, y: standoff * 0.25, z: 0 };
+  // Face the star you have just travelled to, rather than whatever heading you arrived with.
+  controls.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
   applyEvidence();
 }
 
@@ -172,6 +190,7 @@ function returnToSolarSystem(): void {
   activeSystem = null;
   camera.frame = earthEntry.frame;
   camera.position = { x: EARTH.radiusM * 2.6, y: EARTH.radiusM * 0.6, z: 0 };
+  controls.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
   starMap.setCurrent(null);
 }
 

@@ -58,6 +58,8 @@ export function createControls(canvas: HTMLCanvasElement): {
     nearestSurfaceDistanceM: number,
     dt: number,
   ) => void;
+  /** Aim along a direction, snapping rather than easing. Used on spawn and on arrival. */
+  lookAt: (dx: number, dy: number, dz: number) => void;
   dispose: () => void;
 } {
   const state: ControlState = {
@@ -224,5 +226,26 @@ export function createControls(canvas: HTMLCanvasElement): {
     canvas.removeEventListener("click", onClick);
   };
 
-  return { state, update, dispose };
+  /**
+   * Aim the camera along a direction.
+   *
+   * Inverts the same Euler convention `update` composes with (YXZ, forward = -Z), so the
+   * heading it produces is exactly what the flight model would have had to be turned to.
+   */
+  const lookAt = (dx: number, dy: number, dz: number): void => {
+    const length = Math.hypot(dx, dy, dz);
+    if (length === 0) return;
+    const x = dx / length;
+    const y = dy / length;
+    const z = dz / length;
+
+    targetPitch = Math.asin(Math.min(Math.max(y, -1), 1));
+    targetYaw = Math.atan2(-x, -z);
+    // Snap rather than ease: this is used on arrival, and easing across a jump would swing
+    // the view through whatever happens to lie between two unrelated headings.
+    pitch = targetPitch;
+    yaw = targetYaw;
+  };
+
+  return { state, update, lookAt, dispose };
 }
