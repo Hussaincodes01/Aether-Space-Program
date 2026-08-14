@@ -14,6 +14,7 @@
 import { buildPlanetModel, getSystem, listSystems } from "@aether/catalog";
 import type { EvidenceProfile } from "@aether/missions";
 import { classifyFields } from "./badges.js";
+import { applySubsections } from "./panel-dock.js";
 
 export interface CatalogSelection {
   systemId: string;
@@ -38,6 +39,17 @@ export function createCatalogPanel(evidence: EvidenceProfile): CatalogPanel {
   const listeners: Array<(selection: CatalogSelection) => void> = [];
   let current: CatalogSelection = DEFAULT_SELECTION;
   let profile = evidence;
+
+  /**
+   * Which systems are expanded.
+   *
+   * Owned here rather than read back off the DOM because the panel rebuilds its innerHTML
+   * on every mission change, and state living in the markup would be destroyed each time --
+   * every toggle would snap all the systems shut under the user.
+   *
+   * The selected planet's system starts open, so the panel opens showing where you are.
+   */
+  const expanded = new Set<string>([DEFAULT_SELECTION.systemId]);
 
   const element = document.createElement("aside");
   element.id = "catalog";
@@ -86,9 +98,15 @@ export function createCatalogPanel(evidence: EvidenceProfile): CatalogPanel {
 
         return `
           <section class="cat-system">
-            <h2>${escape(summary.name)}<span class="cat-dist">${distance}</span></h2>
-            <p class="cat-blurb">${escape(summary.blurb)}</p>
-            ${planets}
+            <h2 data-group="${escape(summary.id)}">
+              <span class="sub-arrow" aria-hidden="true"></span>
+              <span class="sub-label">${escape(summary.name)}</span>
+              <span class="cat-dist">${distance}</span>
+            </h2>
+            <div class="sub-body">
+              <p class="cat-blurb">${escape(summary.blurb)}</p>
+              ${planets}
+            </div>
           </section>`;
       })
       .join("");
@@ -100,6 +118,12 @@ export function createCatalogPanel(evidence: EvidenceProfile): CatalogPanel {
         surface hypothesis you can interrogate. Counts reflect the current mission selection.
       </p>
       ${systems}`;
+
+    applySubsections(element, expanded, (key) => {
+      if (expanded.has(key)) expanded.delete(key);
+      else expanded.add(key);
+      render();
+    });
   };
 
   element.addEventListener("click", (event) => {

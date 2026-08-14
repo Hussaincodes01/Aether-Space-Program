@@ -65,6 +65,7 @@ import { createModelInspector } from "./model-inspector.js";
 import { createErrorPanel, webglSupportMessage } from "./error-panel.js";
 import { buildPlanetModel, type PlanetModel } from "@aether/catalog";
 import { createDebugOverlay } from "./debug-overlay.js";
+import { createDock } from "./panel-dock.js";
 import { desaturate, speculationStyle } from "./speculation.js";
 
 const canvas = document.createElement("canvas");
@@ -194,8 +195,18 @@ document.body.appendChild(debugOverlay.element);
 // staring at empty space, which is exactly what it looked like.
 controls.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
 
+/**
+ * Two rails, and nothing appended straight to the body any more.
+ *
+ * Left holds the places you can go, right holds what is known about them. Everything starts
+ * collapsed: the default state of a space application should be looking at space, and the
+ * previous layout opened with six full-height panels covering almost the whole canvas.
+ */
+const leftDock = createDock("left");
+const rightDock = createDock("right");
+document.body.append(leftDock.element, rightDock.element);
+
 const missionPanel = createMissionPanel("today");
-document.body.appendChild(missionPanel.element);
 let currentEnvelopeWidth = envelopeWidth(missionPanel.getProfile());
 missionPanel.onChange((profile) => {
   currentEnvelopeWidth = envelopeWidth(profile);
@@ -211,10 +222,8 @@ missionPanel.onChange((profile) => {
 // ── Interstellar travel ─────────────────────────────────────────────────────────────────
 
 const starMap = createInterstellarMap();
-document.body.appendChild(starMap.element);
 
 const bodyList = createBodyList();
-document.body.appendChild(bodyList.element);
 
 // -- The modelled catalog -----------------------------------------------------------------
 
@@ -227,7 +236,6 @@ document.body.appendChild(bodyList.element);
  * we know almost nothing about look as authoritative as TRAPPIST-1.
  */
 const catalogPanel = createCatalogPanel(missionPanel.getProfile());
-document.body.appendChild(catalogPanel.element);
 
 const modelInspector = createModelInspector();
 document.body.appendChild(modelInspector.element);
@@ -266,6 +274,26 @@ catalogPanel.onSelect((selection) => {
 });
 
 rebuildModel();
+
+/**
+ * Panel registration.
+ *
+ * Order here is the order on screen. The hints are the keyboard shortcut, so the binding is
+ * discoverable without reading the help line.
+ */
+leftDock.add({
+  id: "catalog",
+  title: "Catalog",
+  hint: "C",
+  element: catalogPanel.element,
+  // The one panel worth opening on load: it is where a first-time user chooses what to look
+  // at, and it is the entry point to the provenance inspector.
+  startOpen: true,
+});
+leftDock.add({ id: "bodies", title: "Solar System", hint: "B", element: bodyList.element });
+leftDock.add({ id: "starmap", title: "Interstellar map", hint: "K", element: starMap.element });
+
+rightDock.add({ id: "missions", title: "Missions", hint: "M", element: missionPanel.element });
 
 /**
  * Travel to a Solar System body.
@@ -422,11 +450,6 @@ function inspectNearest(): void {
  * keys toggle one at a time.
  */
 const panels = {
-  starmap: starMap.element,
-  bodies: bodyList.element,
-  catalog: catalogPanel.element,
-  missions: missionPanel.element,
-  provenance: provenance.element,
   hud: document.getElementById("hud"),
   help: document.getElementById("help"),
 };
@@ -439,21 +462,16 @@ function setPanel(el: HTMLElement | null, visible: boolean): void {
 
 function toggleAllUi(): void {
   uiHidden = !uiHidden;
-  setPanel(panels.starmap, !uiHidden);
-  setPanel(panels.bodies, !uiHidden);
-  setPanel(panels.catalog, !uiHidden);
-  setPanel(panels.missions, !uiHidden);
+  // Both rails slide away rather than being hidden, so the reopen handles stay reachable
+  // without needing to remember the shortcut that got rid of them.
+  leftDock.setRailCollapsed(uiHidden);
+  rightDock.setRailCollapsed(uiHidden);
   setPanel(panels.hud, !uiHidden);
   setPanel(panels.help, !uiHidden);
   if (uiHidden) {
     provenance.hide();
     modelInspector.hide();
   }
-}
-
-function togglePanel(el: HTMLElement | null): void {
-  if (!el) return;
-  el.style.display = el.style.display === "none" ? "" : "none";
 }
 
 // Home returns to the Solar System — the one place with ground truth to check against.
@@ -473,16 +491,16 @@ window.addEventListener("keydown", (event) => {
       toggleAllUi();
       break;
     case "KeyM":
-      togglePanel(panels.missions);
+      rightDock.toggle("missions");
       break;
     case "KeyK":
-      togglePanel(panels.starmap);
+      leftDock.toggle("starmap");
       break;
     case "KeyB":
-      togglePanel(panels.bodies);
+      leftDock.toggle("bodies");
       break;
     case "KeyC":
-      togglePanel(panels.catalog);
+      leftDock.open("catalog");
       break;
     case "KeyG":
       // The precision readout. Named for "geometry", and kept off by default because it is

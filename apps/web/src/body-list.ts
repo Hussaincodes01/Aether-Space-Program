@@ -14,6 +14,7 @@
 
 import { AU } from "@aether/units";
 import { SOLAR_SYSTEM, type SolarBody } from "@aether/solar-system";
+import { applySubsections } from "./panel-dock.js";
 
 export interface BodyList {
   element: HTMLElement;
@@ -113,6 +114,15 @@ export function createBodyList(): BodyList {
   let current: string | null = null;
   let query = "";
 
+  /**
+   * Which groups are expanded.
+   *
+   * Thirty-six bodies is a long scroll, and the natural grouping -- Jupiter and the four
+   * things orbiting it -- is exactly what is worth being able to fold. Only the inner
+   * planets start open, because that is where the camera starts.
+   */
+  const expanded = new Set<string>(["Inner planets"]);
+
   const element = document.createElement("aside");
   element.id = "bodylist";
 
@@ -142,8 +152,12 @@ export function createBodyList(): BodyList {
       if (!rows) return "";
       return `
         <section class="group">
-          <h2>${group.label}<span class="groupnote">${group.note}</span></h2>
-          ${rows}
+          <h2 data-group="${escape(group.label)}">
+            <span class="sub-arrow" aria-hidden="true"></span>
+            <span class="sub-label">${escape(group.label)}</span>
+            <span class="groupnote">${escape(group.note)}</span>
+          </h2>
+          <div class="sub-body">${rows}</div>
         </section>`;
     }).join("");
 
@@ -156,6 +170,16 @@ export function createBodyList(): BodyList {
       </p>
       <div class="groups">${groups || '<p class="loading">No match.</p>'}</div>
     `;
+
+    // A search hit inside a folded group would be invisible, which reads as "no results".
+    // While a query is active every group is forced open; folding resumes when it clears.
+    const effective = q ? new Set(GROUPS.map((g) => g.label)) : expanded;
+
+    applySubsections(element, effective, (key) => {
+      if (expanded.has(key)) expanded.delete(key);
+      else expanded.add(key);
+      render();
+    });
 
     const search = element.querySelector<HTMLInputElement>(".search");
     search?.addEventListener("input", () => {
