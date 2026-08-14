@@ -1,15 +1,16 @@
 # Product Requirements Document
+
 ## **Aether** — Distance-Accurate Exoplanet Visualization with AI-Constrained Surface Generation
 
-| | |
-|---|---|
-| **Version** | 2.1 — consolidates PRD v2.0 with the v1.2 technical addendum |
-| **Date** | 2026-08-03 |
-| **Status** | Approved direction; week-1 decisions outstanding (§18) |
-| **Team** | 1 game developer · 2 AI developers · 1 lead (product / data / backend) |
-| **Renderer** | **Three.js + TypeScript.** WebGPURenderer + TSL preferred; WebGL2 reduced-quality fallback. |
+|                   |                                                                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Version**       | 2.1 — consolidates PRD v2.0 with the v1.2 technical addendum                                                          |
+| **Date**          | 2026-08-03                                                                                                            |
+| **Status**        | Approved direction; week-1 decisions outstanding (§18)                                                                |
+| **Team**          | 1 game developer · 2 AI developers · 1 lead (product / data / backend)                                                |
+| **Renderer**      | **Three.js + TypeScript.** WebGPURenderer + TSL preferred; WebGL2 reduced-quality fallback.                           |
 | **Primary claim** | Accurate astronomical positions, distances and orbits; **scientifically constrained** — not reconstructed — surfaces. |
-| **First release** | 16 weeks (team of four); ~28 weeks part-time |
+| **First release** | 16 weeks (team of four); ~28 weeks part-time                                                                          |
 
 > **Document history.** v2.0 consolidated six planning documents and the original PRD.
 > v2.1 integrates the v1.2 addendum, which supersedes v2.0 on the renderer, the data model,
@@ -23,11 +24,11 @@
 
 ### 1.1 The gap
 
-| Category | Examples | Strength | Fatal limitation |
-|---|---|---|---|
-| Scientific catalogs | NASA Exoplanet Archive, ExoFOP | Authoritative | Tables. No sense of place. |
+| Category               | Examples                       | Strength                      | Fatal limitation                      |
+| ---------------------- | ------------------------------ | ----------------------------- | ------------------------------------- |
+| Scientific catalogs    | NASA Exoplanet Archive, ExoFOP | Authoritative                 | Tables. No sense of place.            |
 | Scientific visualizers | OpenSpace, Gaia Sky, NASA Eyes | Accurate positions and orbits | Planets are spheres. You cannot land. |
-| Procedural space games | No Man's Sky, Elite, KSP | Immersion, agency | Entirely invented. Zero traceability. |
+| Procedural space games | No Man's Sky, Elite, KSP       | Immersion, agency             | Entirely invented. Zero traceability. |
 
 Aether occupies the empty quadrant: immersive, playable **and** auditable. Research confirms
 it is genuinely empty — OpenSpace's exoplanet module renders orbits and a habitable-zone
@@ -40,7 +41,7 @@ illustrations.
 
 For almost every exoplanet there is no spatially resolved surface observation. Transmission
 and emission spectra primarily constrain atmospheric and thermal properties, often with
-strong degeneracies. Mass, radius and stellar irradiation constrain *classes* of interiors
+strong degeneracies. Mass, radius and stellar irradiation constrain _classes_ of interiors
 and surfaces but do not uniquely determine continents, mountain ranges, craters, oceans or
 colours.
 
@@ -70,7 +71,7 @@ The word **accurate** may be used for orbital calculations, unit conversions and
 parameters with stated tolerances.
 
 Generated geography is described as **scientifically constrained**, **physically
-plausible**, or **data-grounded**. Never *accurate*, *predicted*, or *reconstructed*.
+plausible**, or **data-grounded**. Never _accurate_, _predicted_, or _reconstructed_.
 
 ### 1.5 The central mechanic (v1.1 and beyond)
 
@@ -140,27 +141,27 @@ uncertainty machinery into one thing. **It is scheduled for v1.1, not the first 
 
 ### 2.3 Metrics
 
-| Metric | Target |
-|---|---|
-| Planets, fully QA'd | 3 |
-| Hypotheses per planet | 3–8 |
-| Provenance-complete displayed values | 100% |
-| Frame time p95 (surface, 1080p, mid GPU) | < 16.6 ms |
-| Cold load to interactive system view | < 5 s at 25 Mbps |
-| Cross-GPU terrain height agreement | within documented tolerance |
-| Uncertainty propagation vs. Monte Carlo reference | within stated tolerance |
-| Provenance-policy violations reaching `ScienceSpec` | **0** |
+| Metric                                              | Target                      |
+| --------------------------------------------------- | --------------------------- |
+| Planets, fully QA'd                                 | 3                           |
+| Hypotheses per planet                               | 3–8                         |
+| Provenance-complete displayed values                | 100%                        |
+| Frame time p95 (surface, 1080p, mid GPU)            | < 16.6 ms                   |
+| Cold load to interactive system view                | < 5 s at 25 Mbps            |
+| Cross-GPU terrain height agreement                  | within documented tolerance |
+| Uncertainty propagation vs. Monte Carlo reference   | within stated tolerance     |
+| Provenance-policy violations reaching `ScienceSpec` | **0**                       |
 
 ---
 
 ## 3. Users
 
-| Persona | Need | Design implication |
-|---|---|---|
-| **Curious public / student** | "What would it be like to stand there?" | Zero-friction browser entry, cinematic default camera, plain language |
-| **Educator** | Demonstrate inference vs. measurement | Presenter mode, deep-link to exact camera pose, hypothesis and observation state |
-| **Researcher** | Check the visualisation does not misrepresent their data | Full provenance export (JSON + BibTeX), parameter override, hypothesis cycling |
-| **Player** (v1.1) | Real stakes and progression | Observing-time scarcity, calibration scoring, discovery booklet |
+| Persona                      | Need                                                     | Design implication                                                               |
+| ---------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Curious public / student** | "What would it be like to stand there?"                  | Zero-friction browser entry, cinematic default camera, plain language            |
+| **Educator**                 | Demonstrate inference vs. measurement                    | Presenter mode, deep-link to exact camera pose, hypothesis and observation state |
+| **Researcher**               | Check the visualisation does not misrepresent their data | Full provenance export (JSON + BibTeX), parameter override, hypothesis cycling   |
+| **Player** (v1.1)            | Real stakes and progression                              | Observing-time scarcity, calibration scoring, discovery booklet                  |
 
 ---
 
@@ -222,17 +223,17 @@ separated so a visually useful fallback can never become a measurement by accide
 
 ```ts
 interface PlanetModel {
-  science: ScienceSpec;       // Ingested measurements and allowlisted derivations
-  inference: InferenceSpec;   // Cited priors, posterior distributions, uncertainty
-  visual: VisualSpec;         // Render-only scale, textures, artistic realization
+  science: ScienceSpec; // Ingested measurements and allowlisted derivations
+  inference: InferenceSpec; // Cited priors, posterior distributions, uncertainty
+  visual: VisualSpec; // Render-only scale, textures, artistic realization
 }
 ```
 
-| Layer | Who may write | Affects scientific calculations? |
-|---|---|---|
-| `ScienceSpec` | Catalog ingestion and allowlisted physics functions | Yes |
-| `InferenceSpec` | Versioned statistical/ML models and the deterministic prior resolver | Yes, with uncertainty |
-| `VisualSpec` | Visual composer, LLM proposals, generative texture pipeline | **No** |
+| Layer           | Who may write                                                        | Affects scientific calculations? |
+| --------------- | -------------------------------------------------------------------- | -------------------------------- |
+| `ScienceSpec`   | Catalog ingestion and allowlisted physics functions                  | Yes                              |
+| `InferenceSpec` | Versioned statistical/ML models and the deterministic prior resolver | Yes, with uncertainty            |
+| `VisualSpec`    | Visual composer, LLM proposals, generative texture pipeline          | **No**                           |
 
 **The LLM service has no API or database permission that can mutate `ScienceSpec` or
 `InferenceSpec`.** This is enforced by credentials and schema, not by instruction.
@@ -245,7 +246,7 @@ interface ScientificQuantity {
   unit: string;
   uncertainty?: { minus: number; plus: number; distribution?: string };
   method: "measured" | "derived" | "retrieved" | "prior";
-  sourceId: string;          // must exist in the ingested source registry
+  sourceId: string; // must exist in the ingested source registry
   sourceUrl?: string;
   retrievedAt: string;
   confidence?: number;
@@ -347,14 +348,25 @@ compatible published measurement
 
 ```json
 {
-  "science":   { "radius_earth": { "value": null, "method": "unknown" } },
-  "inference": { "radius_earth": { "median": 1.18, "p16": 0.82, "p84": 1.73,
-                                   "method": "sampled_prior",
-                                   "prior_id": "rocky-planet-population-v1",
-                                   "seed": "sha256:..." } },
-  "visual":    { "render_radius_earth": { "value": 1.18, "method": "visual_placeholder",
-                                          "source_field": "inference.radius_earth",
-                                          "affects_physics": false } }
+  "science": { "radius_earth": { "value": null, "method": "unknown" } },
+  "inference": {
+    "radius_earth": {
+      "median": 1.18,
+      "p16": 0.82,
+      "p84": 1.73,
+      "method": "sampled_prior",
+      "prior_id": "rocky-planet-population-v1",
+      "seed": "sha256:..."
+    }
+  },
+  "visual": {
+    "render_radius_earth": {
+      "value": 1.18,
+      "method": "visual_placeholder",
+      "source_field": "inference.radius_earth",
+      "affects_physics": false
+    }
+  }
 }
 ```
 
@@ -509,21 +521,21 @@ Deterministic, closed-form, unit-checked. Every function returns
 `DerivedValue(value, err, inputs_used, formula_id, assumptions)` — never a bare float. The
 `formula_id` maps to a LaTeX string, which is how the provenance inspector is built for free.
 
-| Quantity | Method |
-|---|---|
-| Insolation | `S = L★ / 4πa²` |
-| Equilibrium temperature | `T_eq = T★ √(R★/2a)(1−A_B)^¼`; `A_B` and redistribution factor are explicit, user-visible assumptions |
-| Bulk density | `ρ = 3M / 4πR³` |
-| Surface gravity, escape velocity | `g = GM/R²`, `v_esc = √(2GM/R)` |
-| Composition from M–R | Zeng et al. 2016/2019 |
-| Mass ↔ radius when one is missing | Forecaster (Chen & Kipping 2017) — yields a *distribution* |
-| Scale height | `H = kT/(μg)` |
-| Jeans escape parameter | `λ = GMm/(kT_exo R)` |
-| Cosmic shoreline | Zahnle & Catling 2017 |
-| Habitable zone | Kopparapu et al. 2013/2014, conservative and optimistic |
-| Tidal locking, tidal heating | Standard, with stated Q and k₂ |
-| Stellar colour | Blackbody at T_eff → CIE XYZ → sRGB |
-| Rayleigh coefficient | `β ∝ 1/λ⁴` scaled by column density and μ |
+| Quantity                          | Method                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Insolation                        | `S = L★ / 4πa²`                                                                                       |
+| Equilibrium temperature           | `T_eq = T★ √(R★/2a)(1−A_B)^¼`; `A_B` and redistribution factor are explicit, user-visible assumptions |
+| Bulk density                      | `ρ = 3M / 4πR³`                                                                                       |
+| Surface gravity, escape velocity  | `g = GM/R²`, `v_esc = √(2GM/R)`                                                                       |
+| Composition from M–R              | Zeng et al. 2016/2019                                                                                 |
+| Mass ↔ radius when one is missing | Forecaster (Chen & Kipping 2017) — yields a _distribution_                                            |
+| Scale height                      | `H = kT/(μg)`                                                                                         |
+| Jeans escape parameter            | `λ = GMm/(kT_exo R)`                                                                                  |
+| Cosmic shoreline                  | Zahnle & Catling 2017                                                                                 |
+| Habitable zone                    | Kopparapu et al. 2013/2014, conservative and optimistic                                               |
+| Tidal locking, tidal heating      | Standard, with stated Q and k₂                                                                        |
+| Stellar colour                    | Blackbody at T_eff → CIE XYZ → sRGB                                                                   |
+| Rayleigh coefficient              | `β ∝ 1/λ⁴` scaled by column density and μ                                                             |
 
 **Testing:** `hypothesis` property tests — `T_eq` monotonically decreasing in `a`,
 dimensional consistency, invariance to input unit choice. Uncertainty propagation validated
@@ -537,14 +549,14 @@ against Monte Carlo reference calculations.
 
 Only where a physical formula genuinely cannot answer.
 
-| Job | Why defensible | Owner |
-|---|---|---|
-| Parameter imputation with calibrated uncertainty | Population statistics are real evidence | AI-2 |
-| Planet-class probability | The radius valley is a genuinely fuzzy boundary | AI-2 |
-| Interior-composition inference | Degenerate but constrainable | AI-2 |
-| Atmospheric retrieval surrogate | Full Bayesian retrieval costs CPU-hours | AI-1 |
-| Out-of-distribution detection | The most important safety feature in the stack | Both |
-| Conformal / calibrated intervals | Turns a point estimate into a defensible claim | AI-2 |
+| Job                                              | Why defensible                                  | Owner |
+| ------------------------------------------------ | ----------------------------------------------- | ----- |
+| Parameter imputation with calibrated uncertainty | Population statistics are real evidence         | AI-2  |
+| Planet-class probability                         | The radius valley is a genuinely fuzzy boundary | AI-2  |
+| Interior-composition inference                   | Degenerate but constrainable                    | AI-2  |
+| Atmospheric retrieval surrogate                  | Full Bayesian retrieval costs CPU-hours         | AI-1  |
+| Out-of-distribution detection                    | The most important safety feature in the stack  | Both  |
+| Conformal / calibrated intervals                 | Turns a point estimate into a defensible claim  | AI-2  |
 
 **Forbidden in the render path:** anything physics computes — equilibrium temperature,
 insolation, gravity, escape velocity, scale height, orbits, habitable-zone bounds, stellar
@@ -578,7 +590,7 @@ number for the UI. **Sub-layer properly**; it is the cheapest large accuracy win
 - The June 2026 review confirms DL matches or exceeds traditional pipelines in speed and
   accuracy, CPU-hours → seconds.
 
-**Correction for the team: the Ariel Data Challenge 2024 was *not* a retrieval challenge.**
+**Correction for the team: the Ariel Data Challenge 2024 was _not_ a retrieval challenge.**
 It was signal extraction from spacecraft jitter noise. Read **ADC 2023**.
 
 The same review names four open problems; two are our direct risk surface: **calibration of
@@ -588,7 +600,7 @@ uncertainties under noisy data**, and **generalization across instruments and po
 normalizing flows only at maturity. **PandExo noise injection is mandatory** — models trained
 on noiseless spectra fail catastrophically on real data.
 
-**Sequencing:** retrieval ML ships *after* the physics/priors pipeline, and the priors
+**Sequencing:** retrieval ML ships _after_ the physics/priors pipeline, and the priors
 pipeline is its fallback.
 
 ### 10.4 The surface-composition model — measured accuracy ceiling
@@ -620,8 +632,8 @@ No planet in the catalog has such an observation. Its honest uses are **forward 
 checking** against Earth, Mars and Titan, and as an **HWO/LUVOIR science-case demonstrator** —
 arguably the most fundable framing in the project.
 
-**Upgrade path is published:** *Towards the Habitable Worlds Observatory: 1D CNN Retrieval of
-Reflection Spectra from Evolving Earth Analogs* (Aug 2025) — 1D CNN retrieving six molecular
+**Upgrade path is published:** _Towards the Habitable Worlds Observatory: 1D CNN Retrieval of
+Reflection Spectra from Evolving Earth Analogs_ (Aug 2025) — 1D CNN retrieving six molecular
 abundances plus radius, gravity, surface pressure and temperature, trained on noise-injected
 spectra, with **Monte Carlo Dropout** for uncertainty.
 
@@ -664,43 +676,56 @@ a single `overall_confidence` tint.
   "surface_hypotheses": {
     "selected_id": "H03",
     "selection_seed": "sha256:...",
-    "ensemble": [{
-      "id": "H03",
-      "posterior_weight": 0.28,
-      "class_probabilities": {
-        "airless_rocky": 0.08, "volcanic_rocky": 0.29, "temperate_rocky": 0.31,
-        "ocean_world": 0.17, "ice_dominated": 0.15
-      },
-      "interior": {
-        "core_mass_fraction":  { "median": 0.31, "p16": 0.20, "p84": 0.43 },
-        "water_mass_fraction": { "median": 0.02, "p16": 0.0,  "p84": 0.12 }
-      },
-      "chemistry": {
-        "source_role": "stellar-abundance prior plus Solar System analog library",
-        "mineral_family_probabilities": {
-          "silicate_basaltic": 0.52, "felsic": 0.08,
-          "ultramafic": 0.21, "water_ice": 0.19
-        }
-      },
-      "geophysics": {
-        "tectonic_regime": "stagnant_lid",
-        "tectonic_regime_probability": 0.44,
-        "relief_rms_m":     { "median": 1600, "p16": 500, "p84": 4800 },
-        "crater_retention": { "median": 0.37, "p16": 0.1, "p84": 0.8 }
-      },
-      "terrain_program": {
-        "version": "terrain-physics-0.1.0",
-        "seed": "sha256:...",
-        "operators": ["reference_ellipsoid", "long_wavelength_isostasy",
-                      "impact_population", "volcanic_constructs", "fracture_fields",
-                      "climate_conditioned_erosion", "microdetail"]
-      },
-      "evidence": ["base.mass", "base.radius", "host.abundances", "retrieval.posterior"],
-      "caveats": [
-        "No spatially resolved exoplanet surface observation exists.",
-        "Geography is a procedural realization and is not predicted."
-      ]
-    }]
+    "ensemble": [
+      {
+        "id": "H03",
+        "posterior_weight": 0.28,
+        "class_probabilities": {
+          "airless_rocky": 0.08,
+          "volcanic_rocky": 0.29,
+          "temperate_rocky": 0.31,
+          "ocean_world": 0.17,
+          "ice_dominated": 0.15
+        },
+        "interior": {
+          "core_mass_fraction": { "median": 0.31, "p16": 0.2, "p84": 0.43 },
+          "water_mass_fraction": { "median": 0.02, "p16": 0.0, "p84": 0.12 }
+        },
+        "chemistry": {
+          "source_role": "stellar-abundance prior plus Solar System analog library",
+          "mineral_family_probabilities": {
+            "silicate_basaltic": 0.52,
+            "felsic": 0.08,
+            "ultramafic": 0.21,
+            "water_ice": 0.19
+          }
+        },
+        "geophysics": {
+          "tectonic_regime": "stagnant_lid",
+          "tectonic_regime_probability": 0.44,
+          "relief_rms_m": { "median": 1600, "p16": 500, "p84": 4800 },
+          "crater_retention": { "median": 0.37, "p16": 0.1, "p84": 0.8 }
+        },
+        "terrain_program": {
+          "version": "terrain-physics-0.1.0",
+          "seed": "sha256:...",
+          "operators": [
+            "reference_ellipsoid",
+            "long_wavelength_isostasy",
+            "impact_population",
+            "volcanic_constructs",
+            "fracture_fields",
+            "climate_conditioned_erosion",
+            "microdetail"
+          ]
+        },
+        "evidence": ["base.mass", "base.radius", "host.abundances", "retrieval.posterior"],
+        "caveats": [
+          "No spatially resolved exoplanet surface observation exists.",
+          "Geography is a procedural realization and is not predicted."
+        ]
+      }
+    ]
   }
 }
 ```
@@ -710,23 +735,23 @@ a single `overall_confidence` tint.
 Each terrain operator is enabled only when physics permits it. Every gate is a real,
 unit-checked formula mapping to a `formula_id`, so the inspector text is template-generated:
 
-| Operator | Gate |
-|---|---|
-| `impact_population` | always possible; **retention** gated on atmospheric shielding, resurfacing rate, surface age |
-| `volcanic_constructs` | interior heat — radiogenic (mass, age) or tidal (e, a, M★) |
-| `fracture_fields` | tidal stress and lithosphere, or tectonic regime |
-| `climate_conditioned_erosion` — fluvial | a liquid stable at (T_surf, P_surf): water, methane at Titan temperatures, or CO₂ |
-| `climate_conditioned_erosion` — glacial | solid phase of the dominant volatile stable at poles or anti-stellar point |
-| `climate_conditioned_erosion` — aeolian | atmosphere retained (Jeans λ), surface pressure > ~10 mbar, loose sediment |
-| `long_wavelength_isostasy` | lithosphere and interior structure from the interior model |
-| `lava_ocean` | T_surf above silicate solidus |
+| Operator                                | Gate                                                                                         |
+| --------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `impact_population`                     | always possible; **retention** gated on atmospheric shielding, resurfacing rate, surface age |
+| `volcanic_constructs`                   | interior heat — radiogenic (mass, age) or tidal (e, a, M★)                                   |
+| `fracture_fields`                       | tidal stress and lithosphere, or tectonic regime                                             |
+| `climate_conditioned_erosion` — fluvial | a liquid stable at (T_surf, P_surf): water, methane at Titan temperatures, or CO₂            |
+| `climate_conditioned_erosion` — glacial | solid phase of the dominant volatile stable at poles or anti-stellar point                   |
+| `climate_conditioned_erosion` — aeolian | atmosphere retained (Jeans λ), surface pressure > ~10 mbar, loose sediment                   |
+| `long_wavelength_isostasy`              | lithosphere and interior structure from the interior model                                   |
+| `lava_ocean`                            | T_surf above silicate solidus                                                                |
 
 **Do not make generic fBm the primary geology model.** Noise is the final detail layer.
 Large-scale structure comes from named operators, enabled only when consistent with the
 hypothesis.
 
 **Why this matters concretely:** the C++ `terrain()` is a fixed pipeline controlled by four
-scalars and a seed — the seed changes *where* mountains are, never *whether* there are
+scalars and a seed — the seed changes _where_ mountains are, never _whether_ there are
 mountains. **A generator with four knobs produces the same world three times.** The named
 operator library is the prerequisite for meaningful hypothesis diversity, and it is the
 largest single piece of rendering work in the plan.
@@ -898,14 +923,14 @@ teaching moment.
 
 ### 14.6 Performance budget (1080p, mid GPU, surface)
 
-| Pass | Budget |
-|---|---|
-| Terrain generation (amortised) | 2.5 ms |
-| Terrain raster | 4.0 ms |
-| Atmosphere + aerial perspective | 3.0 ms |
-| Post (TAA, tonemap, bloom) | 1.5 ms |
-| UI / overlays | 1.0 ms |
-| **Total** | **≤ 12 ms** |
+| Pass                            | Budget      |
+| ------------------------------- | ----------- |
+| Terrain generation (amortised)  | 2.5 ms      |
+| Terrain raster                  | 4.0 ms      |
+| Atmosphere + aerial perspective | 3.0 ms      |
+| Post (TAA, tonemap, bloom)      | 1.5 ms      |
+| UI / overlays                   | 1.0 ms      |
+| **Total**                       | **≤ 12 ms** |
 
 **The browser floor is lower than native.** The 932 KB C++ binary hit 60 fps easily; a
 browser will not on the same hardware. Quality tiers and RUM telemetry by GPU class are
@@ -935,15 +960,15 @@ Hypothesis browser · Compare · (v1.1) Mission planner and Discovery booklet.
 
 ### 15.2 Provenance design language
 
-| Evidence class | Colour | Badge | Behaviour |
-|---|---|---|---|
-| `measured` | Cyan | ◆ | Solid; ± error and bibcode |
-| `derived` | Green | ƒ | Formula (KaTeX) + inputs |
-| `retrieved` | Amber | ◈ | Model ID, posterior plot, OOD flag |
-| `constrained_prior` | Amber | ◇ | Prior ID, distribution, gating formulas |
-| `procedural_realization` | Grey | ▨ | Operator program, seed, hypothesis ID |
-| `assumed` | Grey, dashed | ○ | Plain-language assumption + slider |
-| `decorative` | Faint grey | · | `affects_science: false` |
+| Evidence class           | Colour       | Badge | Behaviour                               |
+| ------------------------ | ------------ | ----- | --------------------------------------- |
+| `measured`               | Cyan         | ◆     | Solid; ± error and bibcode              |
+| `derived`                | Green        | ƒ     | Formula (KaTeX) + inputs                |
+| `retrieved`              | Amber        | ◈     | Model ID, posterior plot, OOD flag      |
+| `constrained_prior`      | Amber        | ◇     | Prior ID, distribution, gating formulas |
+| `procedural_realization` | Grey         | ▨     | Operator program, seed, hypothesis ID   |
+| `assumed`                | Grey, dashed | ○     | Plain-language assumption + slider      |
+| `decorative`             | Faint grey   | ·     | `affects_science: false`                |
 
 - **Colour is never the only signal** — shape badges throughout.
 - **Speculation shimmer** — features below a confidence threshold get a subtle amber rim.
@@ -992,7 +1017,7 @@ at DB write — this single decision prevents the entire Earth-radii-versus-Jupi
 class.
 
 **The `parameter` table is append-only.** Updates insert a new row and set `superseded_by`,
-giving free time-travel and letting the UI show *"this radius changed after JWST Cycle 2."*
+giving free time-travel and letting the UI show _"this radius changed after JWST Cycle 2."_
 
 **Testing:** `pytest` + `hypothesis` · golden-file tests on canonical JSON · golden-image
 similarity within threshold · `vitest` · Playwright for the system→surface smoke path ·
@@ -1022,15 +1047,15 @@ surface FPV, trained retrieval, fifteen QA'd worlds) is not a credible 12–16 w
 scientific and performance standard. It is scoped here for **a team of four**, which makes
 the 16 weeks comfortable rather than tight and leaves headroom on the terrain operators.
 
-| Weeks | Work | Owner |
-|---|---|---|
-| **1–2** | Three.js multi-scale precision spike and benchmark. Camera-relative f64, nested frames, reversed depth, WebGPU/WebGL2 decision. **Repo, CI, monorepo.** ML repo made reproducible (§4.2). | Game dev · Lead · AI-1 |
-| **3–4** | `BaseTruthSpec` / `EnvironmentSpec` / three-layer schemas. Provenance UI skeleton. LLM containment schema + permission tests. | Lead · AI-2 |
-| **5–6** | NASA Archive ingestion (`ps` spine), unit normalisation, deterministic derivations, source registry. Analog library from PDS begun. | AI-2 · Lead |
-| **7–10** | Cube-sphere quadtree, tile cache, WebGPU terrain path + fallback, **named operator library**, shared GPU/CPU terrain source. | Game dev |
-| **11–12** | Surface-hypothesis engine, interior/class inference, PSG validation loop, hypothesis ensemble. | AI-2 · AI-1 |
-| **13–14** | Atmosphere/material mapping, constrained AI microtextures, asset registry, provenance picking. | Game dev · AI-1 |
-| **15–16** | Distance/scale validation, performance, accessibility, caveat language, **external scientific review**. | All |
+| Weeks     | Work                                                                                                                                                                                      | Owner                  |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **1–2**   | Three.js multi-scale precision spike and benchmark. Camera-relative f64, nested frames, reversed depth, WebGPU/WebGL2 decision. **Repo, CI, monorepo.** ML repo made reproducible (§4.2). | Game dev · Lead · AI-1 |
+| **3–4**   | `BaseTruthSpec` / `EnvironmentSpec` / three-layer schemas. Provenance UI skeleton. LLM containment schema + permission tests.                                                             | Lead · AI-2            |
+| **5–6**   | NASA Archive ingestion (`ps` spine), unit normalisation, deterministic derivations, source registry. Analog library from PDS begun.                                                       | AI-2 · Lead            |
+| **7–10**  | Cube-sphere quadtree, tile cache, WebGPU terrain path + fallback, **named operator library**, shared GPU/CPU terrain source.                                                              | Game dev               |
+| **11–12** | Surface-hypothesis engine, interior/class inference, PSG validation loop, hypothesis ensemble.                                                                                            | AI-2 · AI-1            |
+| **13–14** | Atmosphere/material mapping, constrained AI microtextures, asset registry, provenance picking.                                                                                            | Game dev · AI-1        |
+| **15–16** | Distance/scale validation, performance, accessibility, caveat language, **external scientific review**.                                                                                   | All                    |
 
 **Three planets, not fifteen.** Suggested: **TRAPPIST-1 e** (terrestrial, HZ, JWST target),
 **GJ 1214 b** (best-studied sub-Neptune, real spectra), **LHS 3844 b** (airless-rock
@@ -1063,16 +1088,16 @@ was the simulation layer** — part-based construction with joint physics, full 
 N-body. **What made KSP1 beloved was the loop.** The loop is cheap; the simulation bankrupts
 you.
 
-KSP1's science system fits unreasonably well, because its structure already *is* the
+KSP1's science system fits unreasonably well, because its structure already _is_ the
 structure of observational science:
 
-| KSP1 | Aether v1.1 |
-|---|---|
-| Experiments valued by **biome × situation** | **Instrument × target × conditions** |
-| **Diminishing returns on repeats** | Posterior width shrinks with diminishing returns. Noise falls as 1/√N — **the mechanic and the mathematics are the same equation.** Derived, not tuned. |
-| Transmit partial / recover full | Quick-look reduced data now, or full calibrated `x1d` later |
-| **Science Archive** | **Discovery booklet** — nearly free, a view over provenance already generated |
-| Science unlocks tech | Observations unlock *knowledge*, which visibly sharpens the world |
+| KSP1                                        | Aether v1.1                                                                                                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Experiments valued by **biome × situation** | **Instrument × target × conditions**                                                                                                                    |
+| **Diminishing returns on repeats**          | Posterior width shrinks with diminishing returns. Noise falls as 1/√N — **the mechanic and the mathematics are the same equation.** Derived, not tuned. |
+| Transmit partial / recover full             | Quick-look reduced data now, or full calibrated `x1d` later                                                                                             |
+| **Science Archive**                         | **Discovery booklet** — nearly free, a view over provenance already generated                                                                           |
+| Science unlocks tech                        | Observations unlock _knowledge_, which visibly sharpens the world                                                                                       |
 
 **Loop:** survey → target and commit observing time → observe → posteriors narrow →
 hypotheses eliminated → world re-composes → visit → booklet. **Scarcity is observing time.
@@ -1093,10 +1118,10 @@ simulation.
 **Tone.** [OUTER WATCH](https://store.steampowered.com/app/4928430/OUTER_WATCH/)'s engine of
 tension is an unreliable AI narrator — the precise opposite of our promise. **Invert it:**
 keep the AI companion as narrator, but source tension from **honest uncertainty rather than
-deception**. It volunteers its confidence and sometimes says *"I don't know."*
+deception**. It volunteers its confidence and sometimes says _"I don't know."_
 
-> *"No atmospheric detection has been published for this planet. Everything below the cloud
-> deck is my best guess."*
+> _"No atmospheric detection has been published for this planet. Everything below the cloud
+> deck is my best guess."_
 
 Scientifically exact and genuinely unsettling. We need not invent dread — "nobody has ever
 seen this and nobody knows" is already eerie, and it is true.
@@ -1179,21 +1204,21 @@ Every screenshot and export includes:
 
 ## 20. Risks
 
-| # | Risk | Severity | Mitigation |
-|---|---|---|---|
-| R1 | **Scope collapse** — this is 3–4 products in one | Critical | Three planets. Game layer deferred to v1.1. Phase gates are real gates. |
-| R2 | **Claim overreach** → scientific backlash | Critical | §1.2 language policy, hypothesis ensembles, framebuffer watermark, planetary-scientist review, provenance-policy tests in CI |
-| R3 | **LLM contaminates the scientific record** | Critical | Structural containment (§5, §6): no credential, no schema field. Tested, not trusted. |
-| R4 | **Scale/precision bugs** make zoom unusable | Critical | Weeks 1–2 spike before any art |
-| R5 | **Terrain operator library underestimated** | High | Largest rendering item; GPU and CPU mirrored from one source from operator two |
-| R6 | **AI texture pipeline slips** (2 weeks is thin) | High | Deterministic procedural fallback is an acceptance criterion; ship without AI textures if needed |
-| R7 | **Browser performance floor** | High | Quality tiers, RUM telemetry by GPU class, hard per-frame chunk budget |
-| R8 | **AGPL contamination** | High | §18.2, decided before anyone reads the source |
-| R9 | **Training-data realism gap** (noiseless → real spectra) | High | PandExo mandatory; validate against published retrievals |
-| R10 | **PSG rate limits / availability** | Medium | Cache aggressively; local deployment or precomputed grids for bulk |
-| R11 | **ML backend nondeterminism** (WebGPU vs WASM) | Medium | Quantize outputs at the generator boundary |
-| R12 | **Data self-consistency** (`pscomppars` trap) | Medium | §8.1 |
-| R13 | **Team capacity misallocation** — 2 AI devs idle-building in months 1–2 | Medium | AI-2 owns ingestion for six weeks |
+| #   | Risk                                                                    | Severity | Mitigation                                                                                                                   |
+| --- | ----------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| R1  | **Scope collapse** — this is 3–4 products in one                        | Critical | Three planets. Game layer deferred to v1.1. Phase gates are real gates.                                                      |
+| R2  | **Claim overreach** → scientific backlash                               | Critical | §1.2 language policy, hypothesis ensembles, framebuffer watermark, planetary-scientist review, provenance-policy tests in CI |
+| R3  | **LLM contaminates the scientific record**                              | Critical | Structural containment (§5, §6): no credential, no schema field. Tested, not trusted.                                        |
+| R4  | **Scale/precision bugs** make zoom unusable                             | Critical | Weeks 1–2 spike before any art                                                                                               |
+| R5  | **Terrain operator library underestimated**                             | High     | Largest rendering item; GPU and CPU mirrored from one source from operator two                                               |
+| R6  | **AI texture pipeline slips** (2 weeks is thin)                         | High     | Deterministic procedural fallback is an acceptance criterion; ship without AI textures if needed                             |
+| R7  | **Browser performance floor**                                           | High     | Quality tiers, RUM telemetry by GPU class, hard per-frame chunk budget                                                       |
+| R8  | **AGPL contamination**                                                  | High     | §18.2, decided before anyone reads the source                                                                                |
+| R9  | **Training-data realism gap** (noiseless → real spectra)                | High     | PandExo mandatory; validate against published retrievals                                                                     |
+| R10 | **PSG rate limits / availability**                                      | Medium   | Cache aggressively; local deployment or precomputed grids for bulk                                                           |
+| R11 | **ML backend nondeterminism** (WebGPU vs WASM)                          | Medium   | Quantize outputs at the generator boundary                                                                                   |
+| R12 | **Data self-consistency** (`pscomppars` trap)                           | Medium   | §8.1                                                                                                                         |
+| R13 | **Team capacity misallocation** — 2 AI devs idle-building in months 1–2 | Medium   | AI-2 owns ingestion for six weeks                                                                                            |
 
 ---
 
@@ -1224,18 +1249,20 @@ Spectrum Generator · **PDS** Planetary Data System.
 ## Appendix B — Naming
 
 "Aether" is a placeholder. Check trademark availability before committing. Alternatives
-without collisions in astronomy software: *Terminus*, *Lumen Worlds*, *Provenance*,
-*Substellar*.
+without collisions in astronomy software: _Terminus_, _Lumen Worlds_, _Provenance_,
+_Substellar_.
 
 ## Appendix C — Sources
 
 **Rendering**
+
 - Three.js WebGPURenderer — https://threejs.org/docs/pages/WebGPURenderer.html
 - Three.js WebGL depth options — https://threejs.org/docs/pages/WebGLRenderer.html
 - Three.js 2026 status, r171 production-ready WebGPU, TSL — https://www.utsubo.com/blog/threejs-2026-what-changed
 - Cosmos Journeyer (AGPL) — https://github.com/BarthPaleologue/CosmosJourneyer
 
 **Data**
+
 - NASA Exoplanet Archive TAP guide — https://exoplanetarchive.ipac.caltech.edu/docs/TAP/usingTAP.html
 - PSCompPars self-consistency caveat — https://exoplanetarchive.ipac.caltech.edu/docs/pscp_about.html
 - How PSCompPars values are calculated — https://exoplanetarchive.ipac.caltech.edu/docs/pscp_calc.html
@@ -1244,23 +1271,27 @@ without collisions in astronomy software: *Terminus*, *Lumen Worlds*, *Provenanc
 - NASA Planetary Spectrum Generator API — https://psg.gsfc.nasa.gov/helpapi.php
 
 **Forward models**
+
 - MALBEC v1.0, CUISINES RT intercomparison (10 codes) — https://arxiv.org/html/2402.04329v1
 - petitRADTRANS 3 opacities and linelist tags — https://petitradtrans.readthedocs.io/en/latest/content/available_opacities.html
 - ExoMol 2024 release — https://arxiv.org/pdf/2406.06347
 - Ariel retrieval challenge — https://arxiv.org/pdf/2203.00482
 
 **ML retrieval**
+
 - ML/DL for exoplanet characterization, review, June 2026 — https://arxiv.org/abs/2606.23766
 - SBI winning Ariel Data Challenge 2023 (normalizing flows) — https://arxiv.org/pdf/2309.09337
 - Flow matching + neural importance sampling vs. nested sampling — https://arxiv.org/abs/2312.08295
-- Ariel Data Challenge 2024 (signal extraction, *not* retrieval) — https://arxiv.org/abs/2505.08940
+- Ariel Data Challenge 2024 (signal extraction, _not_ retrieval) — https://arxiv.org/abs/2505.08940
 
 **Surface characterization**
+
 - Surface degeneracies in single-visit HWO reflected-light observations, March 2026 — https://arxiv.org/html/2603.25694
 - Towards HWO: 1D CNN retrieval of reflection spectra, Aug 2025 — https://arxiv.org/abs/2508.00076
 - Mineral false positives in surface biosignature searches, 2026 — https://arxiv.org/pdf/2605.10646
 
 **Game design references**
+
 - Kerbal Space Program 2 status — https://en.wikipedia.org/wiki/Kerbal_Space_Program_2
 - KSP science system — https://wiki.kerbalspaceprogram.com/wiki/Science
 - OUTER WATCH — https://store.steampowered.com/app/4928430/OUTER_WATCH/

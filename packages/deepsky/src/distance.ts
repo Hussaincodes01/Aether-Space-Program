@@ -1,3 +1,4 @@
+import { PARSEC } from "@aether/units";
 /**
  * Distances to deep-sky objects.
  *
@@ -183,7 +184,15 @@ export function rescaleForHubble(
   return megaparsecs * (from.value / to.value);
 }
 
-export const MEGAPARSEC_M = 3.0856775814913673e22;
+/**
+ * One megaparsec in metres.
+ *
+ * Derived from the parsec rather than restated as a literal. The IAU parsec is exactly
+ * AU x 648000/pi, which is 17 significant digits; a double holds ~16, so writing the full
+ * literal here silently dropped its last digit. Deriving it keeps one definition and makes
+ * the rounding happen where it is documented.
+ */
+export const MEGAPARSEC_M = PARSEC * 1e6;
 
 export function megaparsecsToMetres(mpc: number): number {
   return mpc * MEGAPARSEC_M;

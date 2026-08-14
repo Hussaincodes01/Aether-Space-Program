@@ -18,7 +18,7 @@ or physically self-consistent" because fields come from different publications.
 
 That caveat does not apply to what this uses it for. **Position and distance come from a
 single source** (Gaia astrometry) regardless of which paper supplied a planet's mass, so for
-*mapping* the composite table is both correct and considerably more complete than `ps`.
+_mapping_ the composite table is both correct and considerably more complete than `ps`.
 
 The caveat bites when combining fields — a density from a mass in one paper and a radius in
 another. Any such derivation must use `ps` instead, and every value carries its method so

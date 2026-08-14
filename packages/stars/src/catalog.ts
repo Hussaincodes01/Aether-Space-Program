@@ -142,7 +142,9 @@ export const CATALOG_FILES: CatalogTier = {
 export async function loadCatalog(url: string): Promise<StarCatalog> {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new CatalogFormatError(`Failed to load star catalogue from ${url}: ${response.status}`);
+    throw new CatalogFormatError(
+      `Failed to load star catalogue from ${url}: ${response.status}`,
+    );
   }
   return parseCatalog(await response.arrayBuffer());
 }

@@ -12,11 +12,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@aether/physics": "workspace:*",
     "@aether/schema": "workspace:*",
     "@aether/units": "workspace:*"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

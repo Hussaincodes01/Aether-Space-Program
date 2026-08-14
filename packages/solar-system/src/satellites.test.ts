@@ -49,7 +49,7 @@ describe("satellite orbital periods match published sidereal values", () => {
     ["titania", 8.705872, 0.01],
     ["oberon", 13.463239, 0.02],
     ["triton", 5.876854, 0.008],
-    ["charon", 6.387230, 0.01],
+    ["charon", 6.38723, 0.01],
   ];
 
   for (const [id, publishedDays, tolerance] of cases) {
@@ -134,13 +134,19 @@ describe("Titan calibrates the erosion gate as a phase-diagram question", () => 
   });
 
   it("receives fluvial erosion despite being 94 K", () => {
-    const program = compileTerrainProgram({ context: toPlanetContext(TITAN), seed: "sha256:test" });
+    const program = compileTerrainProgram({
+      context: toPlanetContext(TITAN),
+      seed: "sha256:test",
+    });
     const active = program.operators.map((o) => o.op);
     expect(active).toContain("fluvial_erosion");
   });
 
   it("does not receive it on airless Callisto, which is a similar size and composition", () => {
-    const program = compileTerrainProgram({ context: toPlanetContext(getBody("callisto")!), seed: "sha256:test" });
+    const program = compileTerrainProgram({
+      context: toPlanetContext(getBody("callisto")!),
+      seed: "sha256:test",
+    });
     const active = program.operators.map((o) => o.op);
     expect(active).not.toContain("fluvial_erosion");
     expect(active).toContain("impact_population");
@@ -179,14 +185,20 @@ describe("the cold end of the generator", () => {
   it.each(["pluto", "eris", "makemake", "haumea", "charon"])(
     "%s compiles to a terrain program with active layers",
     (id) => {
-      const program = compileTerrainProgram({ context: toPlanetContext(getBody(id)!), seed: "sha256:test" });
+      const program = compileTerrainProgram({
+        context: toPlanetContext(getBody(id)!),
+        seed: "sha256:test",
+      });
       expect(program.operators.length).toBeGreaterThan(0);
     },
   );
 
   it("gives no fluvial erosion to a 30 K body with no atmosphere", () => {
     for (const id of ["eris", "makemake", "charon"]) {
-      const program = compileTerrainProgram({ context: toPlanetContext(getBody(id)!), seed: "sha256:test" });
+      const program = compileTerrainProgram({
+        context: toPlanetContext(getBody(id)!),
+        seed: "sha256:test",
+      });
       expect(
         program.operators.map((o) => o.op),
         `${id} should not have rivers`,

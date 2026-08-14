@@ -37,9 +37,15 @@ export interface Vec3 {
 
 /** A 3×3 matrix in row-major order. */
 export type Mat3 = readonly [
-  number, number, number,
-  number, number, number,
-  number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ];
 
 export function rotationZ(angle: number): Mat3 {
@@ -82,10 +88,7 @@ export function transform(m: Mat3, v: Vec3): Vec3 {
  */
 export function perifocalToEcliptic(elements: OrbitalElements): Mat3 {
   return multiplyMat3(
-    multiplyMat3(
-      rotationZ(elements.ascendingNodeRad),
-      rotationX(elements.inclinationRad),
-    ),
+    multiplyMat3(rotationZ(elements.ascendingNodeRad), rotationX(elements.inclinationRad)),
     rotationZ(elements.argumentOfPeriapsisRad),
   );
 }
@@ -93,9 +96,7 @@ export function perifocalToEcliptic(elements: OrbitalElements): Mat3 {
 /** Orbital period from Kepler's third law: T = 2π√(a³/GM). */
 export function orbitalPeriod(elements: OrbitalElements): number {
   return (
-    2 *
-    Math.PI *
-    Math.sqrt(elements.semiMajorAxisM ** 3 / elements.gravitationalParameter)
+    2 * Math.PI * Math.sqrt(elements.semiMajorAxisM ** 3 / elements.gravitationalParameter)
   );
 }
 
@@ -201,9 +202,7 @@ export function sampleOrbit(elements: OrbitalElements, samples = 256): Vec3[] {
     const E = (i / samples) * 2 * Math.PI;
     const nu = trueAnomaly(E, e);
     const r = a * (1 - e * Math.cos(E));
-    points.push(
-      transform(rotation, { x: r * Math.cos(nu), y: r * Math.sin(nu), z: 0 }),
-    );
+    points.push(transform(rotation, { x: r * Math.cos(nu), y: r * Math.sin(nu), z: 0 }));
   }
 
   return points;

@@ -157,9 +157,17 @@ describe("priors — filling what was never measured", () => {
 
   it("treats a transiting planet's inclination as an inference, not a guess", () => {
     const transit = resolvePlanet(
-      { radiusEarth: 1, massEarth: 1, periodDays: 365, semiMajorAu: 1,
-        eccentricity: 0.01, inclinationDeg: NaN, eqTempK: 288, densityGcc: 5.5,
-        discoveredByTransit: true },
+      {
+        radiusEarth: 1,
+        massEarth: 1,
+        periodDays: 365,
+        semiMajorAu: 1,
+        eccentricity: 0.01,
+        inclinationDeg: NaN,
+        eqTempK: 288,
+        densityGcc: 5.5,
+        discoveredByTransit: true,
+      },
       { teff: 5772, radiusSun: 1, massSun: 1, logLuminosity: 0 },
     );
     // It transits, so it must be near edge-on. That is real information.
@@ -167,9 +175,17 @@ describe("priors — filling what was never measured", () => {
     expect(transit.inclinationDeg.confidence).toBeGreaterThan(0.5);
 
     const rv = resolvePlanet(
-      { radiusEarth: 1, massEarth: 1, periodDays: 365, semiMajorAu: 1,
-        eccentricity: 0.01, inclinationDeg: NaN, eqTempK: 288, densityGcc: 5.5,
-        discoveredByTransit: false },
+      {
+        radiusEarth: 1,
+        massEarth: 1,
+        periodDays: 365,
+        semiMajorAu: 1,
+        eccentricity: 0.01,
+        inclinationDeg: NaN,
+        eqTempK: 288,
+        densityGcc: 5.5,
+        discoveredByTransit: false,
+      },
       { teff: 5772, radiusSun: 1, massSun: 1, logLuminosity: 0 },
     );
     // Radial velocity measures M·sin(i) and cannot separate the two. Confidence zero.
@@ -183,9 +199,17 @@ describe("the resolver never overwrites a measurement", () => {
 
   it("keeps every measured field measured", () => {
     const r = resolvePlanet(
-      { radiusEarth: 2.1, massEarth: 6.4, periodDays: 12.3, semiMajorAu: 0.1,
-        eccentricity: 0.05, inclinationDeg: 88, eqTempK: 500, densityGcc: 3.8,
-        discoveredByTransit: true },
+      {
+        radiusEarth: 2.1,
+        massEarth: 6.4,
+        periodDays: 12.3,
+        semiMajorAu: 0.1,
+        eccentricity: 0.05,
+        inclinationDeg: 88,
+        eqTempK: 500,
+        densityGcc: 3.8,
+        discoveredByTransit: true,
+      },
       star,
     );
     expect(r.completeness).toBe(1);
@@ -197,9 +221,17 @@ describe("the resolver never overwrites a measurement", () => {
 
   it("fills a missing radius from mass, and marks it", () => {
     const r = resolvePlanet(
-      { radiusEarth: NaN, massEarth: 5, periodDays: 20, semiMajorAu: NaN,
-        eccentricity: NaN, inclinationDeg: NaN, eqTempK: NaN, densityGcc: NaN,
-        discoveredByTransit: false },
+      {
+        radiusEarth: NaN,
+        massEarth: 5,
+        periodDays: 20,
+        semiMajorAu: NaN,
+        eccentricity: NaN,
+        inclinationDeg: NaN,
+        eqTempK: NaN,
+        densityGcc: NaN,
+        discoveredByTransit: false,
+      },
       star,
     );
     expect(r.radiusEarth.method).toBe("population_prior");
@@ -210,9 +242,17 @@ describe("the resolver never overwrites a measurement", () => {
 
   it("chains derivations: period -> axis -> temperature", () => {
     const r = resolvePlanet(
-      { radiusEarth: 1, massEarth: 1, periodDays: 365.25, semiMajorAu: NaN,
-        eccentricity: NaN, inclinationDeg: NaN, eqTempK: NaN, densityGcc: NaN,
-        discoveredByTransit: true },
+      {
+        radiusEarth: 1,
+        massEarth: 1,
+        periodDays: 365.25,
+        semiMajorAu: NaN,
+        eccentricity: NaN,
+        inclinationDeg: NaN,
+        eqTempK: NaN,
+        densityGcc: NaN,
+        discoveredByTransit: true,
+      },
       star,
     );
     expect(r.semiMajorAu.method).toBe("derived");
@@ -223,9 +263,17 @@ describe("the resolver never overwrites a measurement", () => {
 
   it("admits ignorance rather than inventing", () => {
     const r = resolvePlanet(
-      { radiusEarth: NaN, massEarth: NaN, periodDays: NaN, semiMajorAu: NaN,
-        eccentricity: NaN, inclinationDeg: NaN, eqTempK: NaN, densityGcc: NaN,
-        discoveredByTransit: false },
+      {
+        radiusEarth: NaN,
+        massEarth: NaN,
+        periodDays: NaN,
+        semiMajorAu: NaN,
+        eccentricity: NaN,
+        inclinationDeg: NaN,
+        eqTempK: NaN,
+        densityGcc: NaN,
+        discoveredByTransit: false,
+      },
       { teff: NaN, radiusSun: NaN, massSun: NaN, logLuminosity: NaN },
     );
     expect(Number.isNaN(r.radiusEarth.value)).toBe(true);
@@ -240,17 +288,33 @@ describe("speculation tracks the evidence", () => {
   it("is low for a fully measured planet and high for a bare one", () => {
     const measured = speculationFraction(
       resolvePlanet(
-        { radiusEarth: 1, massEarth: 1, periodDays: 365, semiMajorAu: 1,
-          eccentricity: 0.02, inclinationDeg: 89, eqTempK: 254, densityGcc: 5.5,
-          discoveredByTransit: true },
+        {
+          radiusEarth: 1,
+          massEarth: 1,
+          periodDays: 365,
+          semiMajorAu: 1,
+          eccentricity: 0.02,
+          inclinationDeg: 89,
+          eqTempK: 254,
+          densityGcc: 5.5,
+          discoveredByTransit: true,
+        },
         star,
       ),
     );
     const bare = speculationFraction(
       resolvePlanet(
-        { radiusEarth: NaN, massEarth: 5, periodDays: NaN, semiMajorAu: NaN,
-          eccentricity: NaN, inclinationDeg: NaN, eqTempK: NaN, densityGcc: NaN,
-          discoveredByTransit: false },
+        {
+          radiusEarth: NaN,
+          massEarth: 5,
+          periodDays: NaN,
+          semiMajorAu: NaN,
+          eccentricity: NaN,
+          inclinationDeg: NaN,
+          eqTempK: NaN,
+          densityGcc: NaN,
+          discoveredByTransit: false,
+        },
         star,
       ),
     );
@@ -260,9 +324,17 @@ describe("speculation tracks the evidence", () => {
   it("never reaches zero, because no exoplanet surface has been resolved", () => {
     const perfect = speculationFraction(
       resolvePlanet(
-        { radiusEarth: 1, massEarth: 1, periodDays: 365, semiMajorAu: 1,
-          eccentricity: 0.02, inclinationDeg: 89, eqTempK: 254, densityGcc: 5.5,
-          discoveredByTransit: true },
+        {
+          radiusEarth: 1,
+          massEarth: 1,
+          periodDays: 365,
+          semiMajorAu: 1,
+          eccentricity: 0.02,
+          inclinationDeg: 89,
+          eqTempK: 254,
+          densityGcc: 5.5,
+          discoveredByTransit: true,
+        },
         star,
       ),
     );

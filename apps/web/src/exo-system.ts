@@ -103,11 +103,7 @@ function orbitLineFor(elements: OrbitalElements, colour: number): THREE.Line {
     // Step in eccentric anomaly so points spread evenly rather than bunching at periapsis.
     const E = (i / 256) * Math.PI * 2;
     const nu =
-      2 *
-      Math.atan2(
-        Math.sqrt(1 + e) * Math.sin(E / 2),
-        Math.sqrt(1 - e) * Math.cos(E / 2),
-      );
+      2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
     const r = a * (1 - e * Math.cos(E));
     const x = r * Math.cos(nu);
     const y = r * Math.sin(nu);
@@ -189,11 +185,15 @@ export function buildExoSystem(
 
   // System frame at the catalogue's true position, in metres.
   const systemFrame = createFrame(`exosystem:${name}`, AU * 200);
-  attach(systemFrame, universe, vec3(
-    systems.positionsPc[index * 3]! * PARSEC,
-    systems.positionsPc[index * 3 + 1]! * PARSEC,
-    systems.positionsPc[index * 3 + 2]! * PARSEC,
-  ));
+  attach(
+    systemFrame,
+    universe,
+    vec3(
+      systems.positionsPc[index * 3]! * PARSEC,
+      systems.positionsPc[index * 3 + 1]! * PARSEC,
+      systems.positionsPc[index * 3 + 2]! * PARSEC,
+    ),
+  );
 
   const starFrame = createFrame(`star:${name}`, starRadiusM * 50);
   attach(starFrame, systemFrame, vec3(0, 0, 0));
@@ -273,11 +273,15 @@ export function buildExoSystem(
     // thing usually measured. Nothing here claims to be a surface.
     const tint = !Number.isFinite(teqK)
       ? 0x8a8378
-      : teqK > 1200 ? 0xff6a3a
-      : teqK > 600 ? 0xc98a5e
-      : teqK > 350 ? 0xb5a184
-      : teqK > 250 ? 0x6d8fa8
-      : 0xcdd9e5;
+      : teqK > 1200
+        ? 0xff6a3a
+        : teqK > 600
+          ? 0xc98a5e
+          : teqK > 350
+            ? 0xb5a184
+            : teqK > 250
+              ? 0x6d8fa8
+              : 0xcdd9e5;
 
     const placeholderGeometry = new THREE.SphereGeometry(1, 32, 16);
     const mesh = new THREE.Mesh(

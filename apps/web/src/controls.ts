@@ -153,7 +153,12 @@ export function createControls(canvas: HTMLCanvasElement): {
    * The usual `value += (target - value) * 0.1` is tied to frame rate and feels sluggish at
    * 30 fps and twitchy at 144. This behaves identically at any rate.
    */
-  const smooth = (current: number, target: number, halfLifeSeconds: number, dt: number): number => {
+  const smooth = (
+    current: number,
+    target: number,
+    halfLifeSeconds: number,
+    dt: number,
+  ): number => {
     const k = 1 - Math.pow(2, -dt / halfLifeSeconds);
     return current + (target - current) * k;
   };
@@ -180,10 +185,7 @@ export function createControls(canvas: HTMLCanvasElement): {
 
     // Throttle ceiling: cross the gap to whatever is nearest in about half a second. Rises
     // as you climb away from a surface, collapses as you approach one.
-    const maxSpeed = Math.min(
-      Math.max(nearestSurfaceDistanceM, 1) * 2,
-      ABSOLUTE_MAX_SPEED_MS,
-    );
+    const maxSpeed = Math.min(Math.max(nearestSurfaceDistanceM, 1) * 2, ABSOLUTE_MAX_SPEED_MS);
     state.speedMs = Math.min(Math.max(state.speedMs, MIN_SPEED_MS), maxSpeed);
 
     move.set(0, 0, 0);

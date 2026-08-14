@@ -199,15 +199,18 @@ function travelTo(systemIndex: number): void {
   // for a scene that shows one.
   activeSystem?.dispose();
   activeSystem = buildExoSystem(
-    systemIndex, systems, planets, names, scene.universe, scene.three,
+    systemIndex,
+    systems,
+    planets,
+    names,
+    scene.universe,
+    scene.three,
   );
 
   // Arrive a few orbital radii out from the innermost planet, so the system reads as a
   // system rather than as a star with specks near it.
   const inner = activeSystem.planets[0];
-  const standoff = inner
-    ? inner.elements.semiMajorAxisM * 2.2
-    : activeSystem.starRadiusM * 400;
+  const standoff = inner ? inner.elements.semiMajorAxisM * 2.2 : activeSystem.starRadiusM * 400;
 
   camera.frame = activeSystem.frame;
   camera.position = { x: standoff, y: standoff * 0.25, z: 0 };
@@ -249,8 +252,7 @@ function inspectNearest(): void {
     if (body) {
       provenance.show({
         name: body.name,
-        subtitle:
-          `${activeSystem.name} · ${(activeSystem.distancePc * 3.26156).toFixed(1)} ly from Earth`,
+        subtitle: `${activeSystem.name} · ${(activeSystem.distancePc * 3.26156).toFixed(1)} ly from Earth`,
         resolved: body.resolved,
         context: body.context,
         seed: `sha256:${body.name}:v1`,
@@ -599,9 +601,7 @@ function frame(now: number): void {
     const host = scene.bodies.get(atmosphereBodyId)!;
     atmosphere.mesh.position.copy(host.mesh.position);
     atmosphere.setPlanetCentre(host.mesh.position);
-    atmosphere.setSunDirection(
-      new THREE.Vector3().subVectors(sunRel, host.mesh.position),
-    );
+    atmosphere.setSunDirection(new THREE.Vector3().subVectors(sunRel, host.mesh.position));
   }
 
   renderer.render(scene.three, threeCamera);

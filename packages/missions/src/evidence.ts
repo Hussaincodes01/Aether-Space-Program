@@ -186,7 +186,18 @@ export const MISSION_PRESETS = {
   today: {
     name: "Everything flying today",
     description: "The full modern picture: TESS discovery, Gaia scale, JWST atmospheres.",
-    missions: ["tess", "kepler", "k2", "gaia", "ground_rv", "ground_transit", "jwst", "hst", "spitzer", "direct_imaging"],
+    missions: [
+      "tess",
+      "kepler",
+      "k2",
+      "gaia",
+      "ground_rv",
+      "ground_transit",
+      "jwst",
+      "hst",
+      "spitzer",
+      "direct_imaging",
+    ],
   },
   discovery_only: {
     name: "Discovery data only",

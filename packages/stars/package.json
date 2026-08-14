@@ -14,10 +14,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc",
-    "build:catalog": "node scripts/build-catalog.mjs"
+    "build:catalog": "node scripts/build-catalog.mjs",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@aether/physics": "workspace:*",
     "@aether/units": "workspace:*"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

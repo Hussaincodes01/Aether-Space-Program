@@ -29,14 +29,14 @@ around it, or it will eventually be shown to a user as though somebody measured 
 
 The six evidence classes are the product:
 
-| Class | Meaning |
-|---|---|
-| `measured` | A direct catalog or spectral measurement |
-| `derived` | A deterministic equation applied to measured inputs |
-| `retrieved` | A posterior inferred from a spectrum |
-| `constrained_prior` | A statistical range consistent with the evidence |
+| Class                    | Meaning                                                 |
+| ------------------------ | ------------------------------------------------------- |
+| `measured`               | A direct catalog or spectral measurement                |
+| `derived`                | A deterministic equation applied to measured inputs     |
+| `retrieved`              | A posterior inferred from a spectrum                    |
+| `constrained_prior`      | A statistical range consistent with the evidence        |
 | `procedural_realization` | One deterministic terrain instantiation from that prior |
-| `decorative` | Visual detail that cannot affect interpretation |
+| `decorative`             | Visual detail that cannot affect interpretation         |
 
 ---
 
@@ -54,14 +54,14 @@ import { defineFormula } from "../registry.js";
 import { derived } from "../derived-value.js";
 
 export const tidalLockingTimescale = defineFormula<Inputs>({
-  id: "tidal_locking_timescale",   // appears in provenance records — stable forever
+  id: "tidal_locking_timescale", // appears in provenance records — stable forever
   name: "Tidal locking timescale",
   latex: String.raw`\tau = \frac{4}{9}\frac{Q}{k_2}\ldots`,
   description: "Time to despin to synchronous rotation.",
   references: ["1977Icar...30..297P"],
   unit: "s",
   domain: (i) => (i.eccentricity < 1 ? null : "orbit must be bound"),
-  compute: (i) => derived({ /* … */ }),
+  compute: (i) => derived({/* … */}),
 });
 ```
 
@@ -87,14 +87,14 @@ export const periglacial = defineOperator({
   name: "Periglacial patterning",
   description: "Polygonal ground and thermokarst from repeated freeze-thaw.",
   references: [],
-  layerOrder: 70,                  // after fluvial (60), before microdetail (100)
+  layerOrder: 70, // after fluvial (60), before microdetail (100)
   parameters: {
     coverage: { min: 0, max: 1, default: 0.2, description: "Patterned-ground fraction." },
   },
   gate: (ctx) => ({
     admissible: ctx.hasStableIce && ctx.surfaceTemperatureK > 150,
-    gatedBy: "equilibrium_temperature",  // must resolve in the physics registry
-    reason: "…",                         // shown verbatim to the user
+    gatedBy: "equilibrium_temperature", // must resolve in the physics registry
+    reason: "…", // shown verbatim to the user
     intensityRange: [0.05, 0.6],
     confidence: 0.3,
   }),
@@ -107,7 +107,7 @@ cites the formula that decided, and the `reason` string is displayed verbatim in
 inspector — write it for a curious user, not for yourself.
 
 Set `scalesWithIntensity: false` only for structural constants like noise octave count.
-Everything representing *how strongly a process operated* must scale, or worlds sharing an
+Everything representing _how strongly a process operated_ must scale, or worlds sharing an
 operator set compile to the same planet. That bug was real: Earth and TRAPPIST-1e once had a
 fingerprint distance of 0.007.
 
@@ -161,8 +161,8 @@ that a gate is not reading enough of the physical context.
 
 Match the surrounding code. Beyond that:
 
-- **Comments explain *why*, not *what*.** `// clamp to [0,1]` is noise. `// Averaging would
-  let a well-measured radius launder a poor mass` is worth its line.
+- **Comments explain _why_, not _what_.** `// clamp to [0,1]` is noise. `// Averaging would
+let a well-measured radius launder a poor mass` is worth its line.
 - **Name the failure mode you are preventing.** Most of the non-obvious code here exists
   because something went wrong; say what.
 - Strict TypeScript, no `any`, no non-null assertions outside tests.
@@ -195,7 +195,7 @@ containing quotes, newlines or backslashes cannot break the JSON or inject field
 
 1. Branch from `main`.
 2. `pnpm check` green.
-3. Explain *why* in the description. What did you learn, what surprised you, what did you
+3. Explain _why_ in the description. What did you learn, what surprised you, what did you
    decide not to do?
 4. If you found a bug, add the test that would have caught it.
 

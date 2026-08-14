@@ -37,7 +37,10 @@ export const plato = defineMission({
     planet_radius_ratio: { quality: 0.9 },
     orbital_period: { quality: 0.9, note: "Multi-year stares recover long periods." },
     transit_epoch: { quality: 0.9 },
-    stellar_radius: { quality: 0.9, note: "Asteroseismology — the most precise route available." },
+    stellar_radius: {
+      quality: 0.9,
+      note: "Asteroseismology — the most precise route available.",
+    },
     stellar_mass: { quality: 0.85, note: "Also asteroseismic." },
     rotation_period: { quality: 0.6 },
   },

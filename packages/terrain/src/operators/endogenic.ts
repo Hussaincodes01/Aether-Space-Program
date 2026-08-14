@@ -30,14 +30,20 @@ export const volcanicConstructs = defineOperator({
   layerOrder: 20,
   parameters: {
     coverage: { min: 0, max: 1, default: 0.2, description: "Fraction of surface resurfaced." },
-    edificeHeightM: { min: 0, max: 25_000, default: 4_000, description: "Typical edifice height." },
+    edificeHeightM: {
+      min: 0,
+      max: 25_000,
+      default: 4_000,
+      description: "Typical edifice height.",
+    },
     scaleKm: { min: 20, max: 2_000, default: 400, description: "Province width." },
   },
   gate: (ctx) => {
     if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);
 
     const flux = totalHeatFlux(ctx);
-    const admissible = flux >= ACTIVE_HEAT_FLUX_WM2 && ctx.surfaceTemperatureK < BASALT_SOLIDUS_K;
+    const admissible =
+      flux >= ACTIVE_HEAT_FLUX_WM2 && ctx.surfaceTemperatureK < BASALT_SOLIDUS_K;
     const intensity = Math.min(1, flux / EXTREME_HEAT_FLUX_WM2);
 
     if (ctx.surfaceTemperatureK >= BASALT_SOLIDUS_K) {
@@ -72,9 +78,15 @@ export const volcanicConstructs = defineOperator({
     const scaleKm = params.scaleKm ?? 400;
     const freq = frequencyForScale(scaleKm, radiusM);
 
-    const province = fbm(dir.x * freq * 0.3, dir.y * freq * 0.3, dir.z * freq * 0.3, seed + 11, {
-      octaves: 3,
-    });
+    const province = fbm(
+      dir.x * freq * 0.3,
+      dir.y * freq * 0.3,
+      dir.z * freq * 0.3,
+      seed + 11,
+      {
+        octaves: 3,
+      },
+    );
     // Coverage sets how much of the surface is inside a province.
     const active = smoothstep(0.6 - (params.coverage ?? 0.2) * 1.4, 0.75, province * 0.5 + 0.5);
     if (active <= 0) return 0;
@@ -101,7 +113,12 @@ export const lavaOcean = defineOperator({
   layerOrder: 110,
   parameters: {
     coverage: { min: 0, max: 1, default: 0.5, description: "Molten fraction of the surface." },
-    emissiveStrength: { min: 0, max: 1, default: 0.6, description: "Thermal emission strength." },
+    emissiveStrength: {
+      min: 0,
+      max: 1,
+      default: 0.6,
+      description: "Thermal emission strength.",
+    },
   },
   gate: (ctx) => {
     if (!hasSolidSurface(ctx)) return noSolidSurface(ctx);

@@ -27,6 +27,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Format check
+        run: pnpm run format:check
+
       - name: Typecheck
         run: pnpm run typecheck
 
@@ -42,7 +48,13 @@ jobs:
                    | grep -oE '[0-9]+' | paste -sd+ - | bc || echo 0)
           echo "summary=${passed} tests passed" >> "$GITHUB_OUTPUT"
 
-      - name: Build client
+      # Root build covers both halves: every package via tsc, then the web client via Vite.
+      # Building only the client used to hide package build breakage, because the client
+      # resolves workspace packages through their sources rather than their emitted output.
+      - name: Build
+        run: pnpm run build
+
+      - name: Build client explicitly
         run: pnpm --filter @aether/web run build
 
   # Posts a build result to Discord after every push to main.

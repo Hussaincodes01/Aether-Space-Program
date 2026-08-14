@@ -23,7 +23,11 @@ const EARTH_RADIUS_M = 6.3781e6;
 const programFor = (ctx: PlanetContext, seed = "sha256:test") =>
   compileTerrainProgram({ context: ctx, seed });
 
-const sampleAt = (ctx: PlanetContext, dir: { x: number; y: number; z: number }, seed?: string) =>
+const sampleAt = (
+  ctx: PlanetContext,
+  dir: { x: number; y: number; z: number },
+  seed?: string,
+) =>
   evaluateTerrain(programFor(ctx, seed), dir, {
     radiusM: ctx.radiusM,
     tidallyLocked: ctx.tidallyLocked,

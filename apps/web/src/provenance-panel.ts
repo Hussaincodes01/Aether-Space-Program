@@ -15,11 +15,7 @@
  *      exoplanet visualiser tells you.
  */
 
-import {
-  compileTerrainProgram,
-  listOperators,
-  type PlanetContext,
-} from "@aether/terrain";
+import { compileTerrainProgram, listOperators, type PlanetContext } from "@aether/terrain";
 import type { FilledValue, PriorMethod, ResolvedPlanet } from "@aether/exoplanets";
 
 /** Badge per evidence class. Shape as well as colour, for colour-blind readers. */
@@ -49,8 +45,9 @@ export interface ProvenancePanel {
 }
 
 function escapeHtml(text: string): string {
-  return text.replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c,
+  return text.replace(
+    /[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c,
   );
 }
 

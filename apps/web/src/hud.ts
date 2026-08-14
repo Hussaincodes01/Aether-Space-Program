@@ -93,8 +93,11 @@ export function renderHud(data: HudData): void {
     row("altitude", formatDistance(data.altitudeM)),
     row("to Sun", formatDistance(data.distanceToStarM)),
     row("throttle", formatSpeed(data.throttle)),
-    row("speed", data.speedMs > 0 ? formatSpeed(data.speedMs) : "stopped",
-      data.speedMs > 0 ? "ok" : "v"),
+    row(
+      "speed",
+      data.speedMs > 0 ? formatSpeed(data.speedMs) : "stopped",
+      data.speedMs > 0 ? "ok" : "v",
+    ),
     row("fps", data.fps.toFixed(0), data.fps >= 55 ? "ok" : "warn"),
     row("speculation", `${(data.speculationFraction * 100).toFixed(0)}%`, "warn"),
     row("true relief", formatDistance(data.reliefM)),

@@ -21,18 +21,18 @@ and that fact is the whole design problem. NASA/JPL-Caltech, public domain.</i><
 
 Three kinds of exoplanet software exist, and none of them do what Aether does.
 
-| | Strength | Limitation |
-|---|---|---|
-| **Catalogs** — NASA Exoplanet Archive, ExoFOP | Authoritative | Tables. No sense of place. |
-| **Visualizers** — OpenSpace, Gaia Sky, NASA Eyes | Correct orbits | Planets are spheres. You cannot land. |
-| **Space games** — No Man's Sky, Elite, KSP | Immersion, agency | Entirely invented. Zero traceability. |
+|                                                  | Strength          | Limitation                            |
+| ------------------------------------------------ | ----------------- | ------------------------------------- |
+| **Catalogs** — NASA Exoplanet Archive, ExoFOP    | Authoritative     | Tables. No sense of place.            |
+| **Visualizers** — OpenSpace, Gaia Sky, NASA Eyes | Correct orbits    | Planets are spheres. You cannot land. |
+| **Space games** — No Man's Sky, Elite, KSP       | Immersion, agency | Entirely invented. Zero traceability. |
 
 Aether occupies the empty quadrant: **immersive and auditable at the same time.**
 
 ### The claim we make, and the one we refuse
 
 For almost every exoplanet there is no spatially resolved surface observation. Transmission
-spectra constrain atmospheres, not geography. Mass and radius constrain a *class* of
+spectra constrain atmospheres, not geography. Mass and radius constrain a _class_ of
 interior, not a coastline.
 
 So Aether does **not** claim to reconstruct a planet's true surface. It claims this instead:
@@ -41,8 +41,8 @@ So Aether does **not** claim to reconstruct a planet's true surface. It claims t
 > measured system data, retrieval posteriors, interior models, and Solar System analog data.
 > Every visible feature is labelled by evidence class and confidence.
 
-The word *accurate* is reserved for orbits, distances and unit conversions. Generated
-geography is **scientifically constrained**, never *accurate* and never *predicted*.
+The word _accurate_ is reserved for orbits, distances and unit conversions. Generated
+geography is **scientifically constrained**, never _accurate_ and never _predicted_.
 
 ---
 
@@ -57,11 +57,11 @@ Pick a planet with three measured parameters and the hypothesis envelope is wide
 surface is a guess, and it is drawn with a strong amber speculation rim to say so. Then add
 evidence:
 
-| Add | And you gain |
-|---|---|
-| **Gaia** | A stellar distance, so the transit depth becomes a real radius |
-| **Radial velocity** | A mass, therefore density and surface gravity |
-| **JWST** | An atmosphere, so the sky colour is derived rather than assumed |
+| Add                 | And you gain                                                    |
+| ------------------- | --------------------------------------------------------------- |
+| **Gaia**            | A stellar distance, so the transit depth becomes a real radius  |
+| **Radial velocity** | A mass, therefore density and surface gravity                   |
+| **JWST**            | An atmosphere, so the sky colour is derived rather than assumed |
 
 The envelope narrows, hypotheses are eliminated, the world re-composes, and the amber rim
 recedes. The discovery loop, the terrain generator, the provenance system and the
@@ -109,7 +109,7 @@ Two things make it a map rather than a dome:
   right amount.
 
 Colour runs B−V colour index → effective temperature ([Ballesteros 2012](https://doi.org/10.1209/0295-5075/97/34008))
-→ blackbody → sRGB, through the *same* `stellarColor()` that lights the planets. One
+→ blackbody → sRGB, through the _same_ `stellarColor()` that lights the planets. One
 physical model, applied consistently.
 
 The tests check it against the real sky: the brightest star comes out at magnitude −1.46
@@ -177,9 +177,9 @@ against the contract rather than against an engine. That line is worth holding.
 
 ```ts
 interface PlanetModel {
-  science: ScienceSpec;       // ingestion + allowlisted physics      affects science: yes
-  inference: InferenceSpec;   // versioned models + prior resolver    affects science: yes, with uncertainty
-  visual: VisualSpec;         // composer, LLM, texture pipeline      affects science: NO
+  science: ScienceSpec; // ingestion + allowlisted physics      affects science: yes
+  inference: InferenceSpec; // versioned models + prior resolver    affects science: yes, with uncertainty
+  visual: VisualSpec; // composer, LLM, texture pipeline      affects science: NO
 }
 ```
 
@@ -192,8 +192,8 @@ Standing on a planet 40 light-years away spans ~27 orders of magnitude. `float32
 significant digits and `float64` gives ~16, so no single linear coordinate system survives
 it: subtracting two huge, nearly-equal doubles annihilates the low bits.
 
-Aether never forms the huge numbers. Every frame stores its position *relative to its
-parent*, and two frames are related by walking to their lowest common ancestor. A one-metre
+Aether never forms the huge numbers. Every frame stores its position _relative to its
+parent_, and two frames are related by walking to their lowest common ancestor. A one-metre
 offset survives at 40 light-years to better than a nanometre — while the naive
 absolute-subtraction approach loses the metre entirely. Both are asserted in
 `packages/coordinates/src/precision.test.ts`.
@@ -209,14 +209,29 @@ pnpm install
 pnpm dev            # http://localhost:5173
 ```
 
-Requires **Node 22+** and **pnpm 9+**.
+### Node 22+
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Run the client |
-| `pnpm check` | Typecheck + test — exactly what CI runs |
-| `pnpm test` | Tests only |
-| `pnpm build` | Build every package and the client |
+Requires **Node 22 or newer** and **pnpm 9+**. The floor is enforced rather than suggested:
+`.npmrc` sets `engine-strict=true`, so `pnpm install` fails immediately and by name on an
+older Node instead of producing a tree that breaks later in a confusing place.
+
+```bash
+nvm use            # reads .nvmrc
+node --version     # must be >= 22
+corepack enable    # pnpm at the exact version in packageManager
+```
+
+| Command             | What it does                                           |
+| ------------------- | ------------------------------------------------------ |
+| `pnpm dev`          | Run the client at http://localhost:5173                |
+| `pnpm check`        | Lint + typecheck + test + build — exactly what CI runs |
+| `pnpm lint`         | ESLint across every package and the client             |
+| `pnpm format`       | Rewrite with Prettier                                  |
+| `pnpm format:check` | Fail if anything is unformatted (CI runs this)         |
+| `pnpm typecheck`    | `tsc --noEmit` everywhere                              |
+| `pnpm test`         | Vitest across every package and the client             |
+| `pnpm build`        | Build every package **and** the web client             |
+| `pnpm build:web`    | Client only                                            |
 
 **Controls:** `W A S D` move · `R` / `F` up and down · `Shift` boost · mouse wheel throttle ·
 `Esc` release the mouse.
@@ -238,12 +253,12 @@ be checked against ground truth.** Nobody has resolved an exoplanet surface, but
 maps of Mars. So the test suite asserts that feeding real parameters into the operator gates
 reproduces worlds we have actually visited:
 
-| World | What the gates must produce | Why |
-|---|---|---|
-| **Moon** | Craters. No wind, water or ice erosion. | Airless, 0 Pa |
-| **Mars** | Dunes and craters, but **no rivers today** | 6 mbar sustains the largest dune fields known; liquid water is not stable |
-| **Earth** | Rivers, dunes and ice | 1 bar, stable water, 71% ocean |
-| **Jupiter** | **No solid surface at all** | 1326 kg/m³ — nothing to stand on, and nothing to hold a crater |
+| World       | What the gates must produce                | Why                                                                       |
+| ----------- | ------------------------------------------ | ------------------------------------------------------------------------- |
+| **Moon**    | Craters. No wind, water or ice erosion.    | Airless, 0 Pa                                                             |
+| **Mars**    | Dunes and craters, but **no rivers today** | 6 mbar sustains the largest dune fields known; liquid water is not stable |
+| **Earth**   | Rivers, dunes and ice                      | 1 bar, stable water, 71% ocean                                            |
+| **Jupiter** | **No solid surface at all**                | 1326 kg/m³ — nothing to stand on, and nothing to hold a crater            |
 
 If Mars came out as an ocean world, the rules would be wrong — and no amount of exoplanet
 work would ever have revealed it. Every exoplanet this project renders inherits its
@@ -256,7 +271,6 @@ credibility from whether Mars looks like Mars.
 ## Status
 
 **Week 1–2 of the plan in [`docs/PRD.md`](docs/PRD.md): the multi-scale precision spike.**
-
 
 <sub><i>All seven TRAPPIST-1 planets orbit closer than Mercury. NASA/JPL-Caltech, public domain.</i></sub>
 
@@ -285,7 +299,7 @@ Working today:
   built on arrival — real orbits, terrain generated live from real parameters — and torn
   down on departure
 - ✅ **Provenance inspector** (press `I`): every value with its evidence class, confidence,
-  formula and caveat — and *why absent features are absent*, straight from the gate that
+  formula and caveat — and _why absent features are absent_, straight from the gate that
   refused them
 - ✅ Live terrain generation on approach, released on departure, so memory stays bounded
 - ✅ Mission registry and evidence model, wired to the rendered speculation rim
@@ -341,5 +355,5 @@ This project uses NASA data and imagery. It is **not** endorsed by or affiliated
 ESA, or any space agency.
 
 > **Every export and screenshot carries this, burned into the framebuffer:**
-> *Data-grounded artistic reconstruction. Geography is procedurally generated and is not an
-> observation.*
+> _Data-grounded artistic reconstruction. Geography is procedurally generated and is not an
+> observation._

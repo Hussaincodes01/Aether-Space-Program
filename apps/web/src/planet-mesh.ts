@@ -100,7 +100,9 @@ export function createTerrainBuilder(): {
     const request = toRequest(options);
 
     if (!worker) {
-      return Promise.resolve(toGeometry(generateTerrainData(request), request.terrainExaggeration));
+      return Promise.resolve(
+        toGeometry(generateTerrainData(request), request.terrainExaggeration),
+      );
     }
 
     const requestId = nextRequestId++;

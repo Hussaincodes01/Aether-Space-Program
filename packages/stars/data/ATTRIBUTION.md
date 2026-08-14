@@ -8,11 +8,11 @@
 
 HYG is compiled from three catalogues:
 
-| Source | Contributes |
-|---|---|
-| **Hipparcos** (ESA, 1997) | High-accuracy parallaxes — the distances that make this a 3D map rather than a dome |
-| **Yale Bright Star Catalogue** | Naked-eye stars, Bayer letters, Flamsteed numbers, proper names |
-| **Gliese Catalogue of Nearby Stars** | Comprehensive coverage within ~75 light years |
+| Source                               | Contributes                                                                         |
+| ------------------------------------ | ----------------------------------------------------------------------------------- |
+| **Hipparcos** (ESA, 1997)            | High-accuracy parallaxes — the distances that make this a 3D map rather than a dome |
+| **Yale Bright Star Catalogue**       | Naked-eye stars, Bayer letters, Flamsteed numbers, proper names                     |
+| **Gliese Catalogue of Nearby Stars** | Comprehensive coverage within ~75 light years                                       |
 
 ## What this means for the repository
 

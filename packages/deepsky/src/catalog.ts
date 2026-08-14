@@ -143,7 +143,9 @@ export const DEEPSKY_FILES = {
 export async function loadDeepSky(url: string): Promise<DeepSkyCatalog> {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new DeepSkyFormatError(`Failed to load deep-sky catalogue from ${url}: ${response.status}`);
+    throw new DeepSkyFormatError(
+      `Failed to load deep-sky catalogue from ${url}: ${response.status}`,
+    );
   }
   return parseDeepSky(await response.arrayBuffer());
 }

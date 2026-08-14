@@ -28,13 +28,7 @@ import {
   type Mat3,
   type SolarBody,
 } from "@aether/solar-system";
-import {
-  attach,
-  createFrame,
-  createUniverseRoot,
-  vec3,
-  type Frame,
-} from "@aether/coordinates";
+import { attach, createFrame, createUniverseRoot, vec3, type Frame } from "@aether/coordinates";
 import type { PlanetMeshResult } from "./planet-mesh.js";
 
 export type TerrainState = "placeholder" | "building" | "detailed";
@@ -87,8 +81,16 @@ const textureLoader = new THREE.TextureLoader();
  * are Solar System Scope under CC BY 4.0.
  */
 const SURFACE_MAPS = new Set([
-  "sun", "mercury", "venus", "earth", "moon",
-  "mars", "jupiter", "saturn", "uranus", "neptune",
+  "sun",
+  "mercury",
+  "venus",
+  "earth",
+  "moon",
+  "mars",
+  "jupiter",
+  "saturn",
+  "uranus",
+  "neptune",
 ]);
 
 export function hasSurfaceMap(bodyId: string): boolean {
@@ -100,9 +102,7 @@ function bodySphere(body: SolarBody): THREE.Mesh {
   // faceting along the terminator, which is exactly where the eye is drawn.
   const geometry = new THREE.SphereGeometry(1, 96, 48);
 
-  const map = SURFACE_MAPS.has(body.id)
-    ? textureLoader.load(`textures/${body.id}.jpg`)
-    : null;
+  const map = SURFACE_MAPS.has(body.id) ? textureLoader.load(`textures/${body.id}.jpg`) : null;
   if (map) map.colorSpace = THREE.SRGBColorSpace;
 
   const material =
@@ -196,9 +196,7 @@ export function buildSolarScene(startTimeS = 0): SolarScene {
     three.add(mesh);
 
     const frame =
-      data.id === "sun"
-        ? sunFrame
-        : createFrame(data.id, Math.max(data.radiusM * 40, 1e6));
+      data.id === "sun" ? sunFrame : createFrame(data.id, Math.max(data.radiusM * 40, 1e6));
 
     if (data.id !== "sun") {
       const parentFrame =
@@ -231,12 +229,7 @@ export function buildSolarScene(startTimeS = 0): SolarScene {
   // Sunlight, coloured by the Sun's actual blackbody temperature. It is very slightly warm,
   // not pure white, which is why every "white sunlight" render looks subtly wrong.
   const { linear } = stellarColor(5772);
-  const sunLight = new THREE.PointLight(
-    new THREE.Color(linear.r, linear.g, linear.b),
-    1,
-    0,
-    0,
-  );
+  const sunLight = new THREE.PointLight(new THREE.Color(linear.r, linear.g, linear.b), 1, 0, 0);
   three.add(sunLight);
   three.add(new THREE.AmbientLight(0x334455, 0.06));
 
@@ -281,8 +274,7 @@ export function updateOrbits(scene: SolarScene, timeS: number): void {
 
 /** Body rotation about its own axis at the current time, including axial tilt. */
 export function bodyOrientation(body: SolarBody, timeS: number): THREE.Quaternion {
-  const spin =
-    body.rotationPeriodS === 0 ? 0 : (2 * Math.PI * timeS) / body.rotationPeriodS;
+  const spin = body.rotationPeriodS === 0 ? 0 : (2 * Math.PI * timeS) / body.rotationPeriodS;
 
   const tilt = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(0, 0, 1),

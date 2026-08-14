@@ -33,12 +33,32 @@ type Group = { label: string; note: string; ids: readonly string[] };
  */
 const GROUPS: readonly Group[] = [
   { label: "The Sun", note: "G2V, 5772 K", ids: ["sun"] },
-  { label: "Inner planets", note: "Rock and metal", ids: ["mercury", "venus", "earth", "moon", "mars", "phobos", "deimos"] },
-  { label: "Jupiter", note: "Four Galilean moons", ids: ["jupiter", "io", "europa", "ganymede", "callisto"] },
-  { label: "Saturn", note: "Rings, and Titan", ids: ["saturn", "mimas", "enceladus", "rhea", "titan", "iapetus"] },
-  { label: "Uranus", note: "Tipped on its side", ids: ["uranus", "miranda", "ariel", "umbriel", "titania", "oberon"] },
+  {
+    label: "Inner planets",
+    note: "Rock and metal",
+    ids: ["mercury", "venus", "earth", "moon", "mars", "phobos", "deimos"],
+  },
+  {
+    label: "Jupiter",
+    note: "Four Galilean moons",
+    ids: ["jupiter", "io", "europa", "ganymede", "callisto"],
+  },
+  {
+    label: "Saturn",
+    note: "Rings, and Titan",
+    ids: ["saturn", "mimas", "enceladus", "rhea", "titan", "iapetus"],
+  },
+  {
+    label: "Uranus",
+    note: "Tipped on its side",
+    ids: ["uranus", "miranda", "ariel", "umbriel", "titania", "oberon"],
+  },
   { label: "Neptune", note: "And captured Triton", ids: ["neptune", "triton"] },
-  { label: "Dwarf planets", note: "The cold, distant end", ids: ["ceres", "pluto", "charon", "eris", "makemake", "haumea"] },
+  {
+    label: "Dwarf planets",
+    note: "The cold, distant end",
+    ids: ["ceres", "pluto", "charon", "eris", "makemake", "haumea"],
+  },
 ];
 
 /** Semi-major axis from the Sun, following the parent chain up for moons. */
@@ -67,7 +87,9 @@ function summarise(body: SolarBody): string {
   const parts: string[] = [];
 
   const radiusKm = body.radiusM / 1000;
-  parts.push(radiusKm >= 1000 ? `r ${(radiusKm / 1000).toFixed(2)}k km` : `r ${radiusKm.toFixed(0)} km`);
+  parts.push(
+    radiusKm >= 1000 ? `r ${(radiusKm / 1000).toFixed(2)}k km` : `r ${radiusKm.toFixed(0)} km`,
+  );
   parts.push(`${body.surfaceTemperatureK.toFixed(0)} K`);
 
   if (body.surfacePressurePa > 0) {
@@ -148,7 +170,9 @@ export function createBodyList(): BodyList {
   };
 
   element.addEventListener("click", (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-body]");
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "button[data-body]",
+    );
     if (!button?.dataset.body) return;
     current = button.dataset.body;
     render();

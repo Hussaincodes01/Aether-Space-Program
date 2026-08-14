@@ -127,7 +127,10 @@ export const directImaging = defineMission({
     },
     dayside_temperature: { quality: 0.7 },
     cloud_and_haze: { quality: 0.5 },
-    planet_mass: { quality: 0.3, note: "From luminosity plus an evolutionary model — model-dependent." },
+    planet_mass: {
+      quality: 0.3,
+      note: "From luminosity plus an evolutionary model — model-dependent.",
+    },
     orbital_inclination: { quality: 0.6, note: "From orbital motion over years." },
     eccentricity: { quality: 0.5 },
   },

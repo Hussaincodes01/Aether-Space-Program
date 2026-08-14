@@ -331,14 +331,26 @@ export function resolvePlanet(raw: RawPlanet, star: RawStar): ResolvedPlanet {
       : unresolved("Density needs both a mass and a radius.");
 
   const fields = [
-    radiusEarth, massEarth, periodDays, semiMajorAu,
-    eccentricity, inclinationDeg, eqTempK, densityGcc,
+    radiusEarth,
+    massEarth,
+    periodDays,
+    semiMajorAu,
+    eccentricity,
+    inclinationDeg,
+    eqTempK,
+    densityGcc,
   ];
   const completeness = fields.filter((f) => f.method === "measured").length / fields.length;
 
   return {
-    radiusEarth, massEarth, periodDays, semiMajorAu,
-    eccentricity, inclinationDeg, eqTempK, densityGcc,
+    radiusEarth,
+    massEarth,
+    periodDays,
+    semiMajorAu,
+    eccentricity,
+    inclinationDeg,
+    eqTempK,
+    densityGcc,
     completeness,
   };
 }
@@ -352,8 +364,11 @@ export function resolvePlanet(raw: RawPlanet, star: RawStar): ResolvedPlanet {
  */
 export function speculationFraction(resolved: ResolvedPlanet): number {
   const fields = [
-    resolved.radiusEarth, resolved.massEarth, resolved.semiMajorAu,
-    resolved.eqTempK, resolved.densityGcc,
+    resolved.radiusEarth,
+    resolved.massEarth,
+    resolved.semiMajorAu,
+    resolved.eqTempK,
+    resolved.densityGcc,
   ];
   const mean = fields.reduce((sum, f) => sum + f.confidence, 0) / fields.length;
   // Never fully certain: no exoplanet surface has ever been resolved.

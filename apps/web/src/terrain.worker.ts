@@ -14,14 +14,17 @@ self.onmessage = (event: MessageEvent<TerrainRequest & { requestId: number }>) =
   try {
     const data = generateTerrainData(request);
 
-    self.postMessage({ requestId, ok: true, data }, {
-      transfer: [
-        data.positions.buffer,
-        data.normals.buffer,
-        data.colours.buffer,
-        data.indices.buffer,
-      ],
-    });
+    self.postMessage(
+      { requestId, ok: true, data },
+      {
+        transfer: [
+          data.positions.buffer,
+          data.normals.buffer,
+          data.colours.buffer,
+          data.indices.buffer,
+        ],
+      },
+    );
   } catch (error) {
     self.postMessage({
       requestId,

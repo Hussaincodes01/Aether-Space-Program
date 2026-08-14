@@ -8,7 +8,13 @@
  * way to find out than waiting for someone to disagree about an exoplanet.
  */
 
-import { ATOMIC_MASS_UNIT, BOLTZMANN, EARTH_MASS, EARTH_RADIUS, GRAVITATIONAL_CONSTANT } from "@aether/units";
+import {
+  ATOMIC_MASS_UNIT,
+  BOLTZMANN,
+  EARTH_MASS,
+  EARTH_RADIUS,
+  GRAVITATIONAL_CONSTANT,
+} from "@aether/units";
 import type { PlanetContext } from "@aether/terrain";
 import { meanMotion } from "./kepler.js";
 import { CORE_BODIES, type SolarBody } from "./bodies.js";
@@ -54,8 +60,7 @@ export function tidalHeating(body: SolarBody, k2OverQ = 6.5e-4): number {
   const e = body.elements.eccentricity;
   if (e === 0) return 0;
 
-  const power =
-    (10.5 * k2OverQ * n ** 5 * body.radiusM ** 5 * e ** 2) / GRAVITATIONAL_CONSTANT;
+  const power = (10.5 * k2OverQ * n ** 5 * body.radiusM ** 5 * e ** 2) / GRAVITATIONAL_CONSTANT;
   return power / (4 * Math.PI * body.radiusM ** 2);
 }
 

@@ -124,7 +124,9 @@ export function createMissionPanel(initial: MissionPresetId = "today"): MissionP
   };
 
   const onClick = (event: Event): void => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-preset]");
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "button[data-preset]",
+    );
     if (!button?.dataset.preset) return;
     selection = presetSelection(button.dataset.preset as MissionPresetId);
     syncCheckboxes();

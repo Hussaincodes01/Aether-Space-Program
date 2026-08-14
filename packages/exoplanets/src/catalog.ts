@@ -131,8 +131,15 @@ export function parseSystems(buffer: ArrayBuffer): SystemCatalog {
   }
 
   return {
-    count, positionsPc, distancesPc, effectiveTemperatures,
-    stellarRadiiSun, stellarMassesSun, logLuminosities, firstPlanet, planetCount,
+    count,
+    positionsPc,
+    distancesPc,
+    effectiveTemperatures,
+    stellarRadiiSun,
+    stellarMassesSun,
+    logLuminosities,
+    firstPlanet,
+    planetCount,
   };
 }
 
@@ -172,9 +179,17 @@ export function parsePlanets(buffer: ArrayBuffer): PlanetCatalog {
   }
 
   return {
-    count, radiiEarth, massesEarth, periodsDays, semiMajorAxesAu,
-    eccentricities, inclinationsDeg, equilibriumTemperatures, densitiesGcc,
-    discoveryMethods, discoveryYears,
+    count,
+    radiiEarth,
+    massesEarth,
+    periodsDays,
+    semiMajorAxesAu,
+    eccentricities,
+    inclinationsDeg,
+    equilibriumTemperatures,
+    densitiesGcc,
+    discoveryMethods,
+    discoveryYears,
   };
 }
 

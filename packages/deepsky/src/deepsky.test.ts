@@ -218,8 +218,9 @@ describe("the Hubble tension is exposed, not hidden", () => {
     const sh0es = distanceFromRedshift(0.02, HUBBLE_CONSTANTS.sh0es2022).megaparsecs;
     // The whole extragalactic universe shrinks ~8% moving from Planck to SH0ES.
     expect(sh0es).toBeLessThan(planck);
-    expect(rescaleForHubble(planck, HUBBLE_CONSTANTS.planck2018, HUBBLE_CONSTANTS.sh0es2022))
-      .toBeCloseTo(sh0es, 6);
+    expect(
+      rescaleForHubble(planck, HUBBLE_CONSTANTS.planck2018, HUBBLE_CONSTANTS.sh0es2022),
+    ).toBeCloseTo(sh0es, 6);
   });
 });
 

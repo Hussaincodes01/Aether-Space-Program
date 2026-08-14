@@ -177,9 +177,12 @@ export function scanForForbiddenFields(payload: unknown, path = "$"): Provenance
  * user might screenshot as fact, which is a real misinformation risk even though it is not
  * a data-integrity one.
  */
-const NUMERIC_CLAIM = /\b\d+(?:\.\d+)?\s*(?:earth|jupiter|solar)?\s*(?:radii|masses|bar|K|kelvin|g\/cm|AU|pc|parsec)/i;
+const NUMERIC_CLAIM =
+  /\b\d+(?:\.\d+)?\s*(?:earth|jupiter|solar)?\s*(?:radii|masses|bar|K|kelvin|g\/cm|AU|pc|parsec)/i;
 
-export function scanNarrativeForNumericClaims(narrative: string | undefined): ProvenanceViolation[] {
+export function scanNarrativeForNumericClaims(
+  narrative: string | undefined,
+): ProvenanceViolation[] {
   if (!narrative) return [];
   const match = NUMERIC_CLAIM.exec(narrative);
   if (!match) return [];

@@ -10,13 +10,7 @@
  */
 
 import { si } from "./brand.js";
-import type {
-  Kelvin,
-  Kilograms,
-  Metres,
-  Seconds,
-  Watts,
-} from "./brand.js";
+import type { Kelvin, Kilograms, Metres, Seconds, Watts } from "./brand.js";
 
 // ── Fundamental (SI 2019 exact, and CODATA 2018 for G) ──────────────────────────────────
 

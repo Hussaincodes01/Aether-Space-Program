@@ -12,10 +12,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@aether/units": "workspace:*",
     "zod": "^3.24.1"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

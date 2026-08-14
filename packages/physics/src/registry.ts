@@ -36,7 +36,9 @@ export interface FormulaDefinition<Inputs> {
 // callers recover the concrete type through the exported const, not through the map.
 const registry = new Map<string, FormulaDefinition<never>>();
 
-export function defineFormula<Inputs>(def: FormulaDefinition<Inputs>): FormulaDefinition<Inputs> {
+export function defineFormula<Inputs>(
+  def: FormulaDefinition<Inputs>,
+): FormulaDefinition<Inputs> {
   if (registry.has(def.id)) {
     throw new Error(
       `Formula id "${def.id}" is already registered. Ids appear in provenance records, so ` +

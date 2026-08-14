@@ -12,6 +12,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint src"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

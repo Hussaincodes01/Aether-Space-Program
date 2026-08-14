@@ -109,8 +109,14 @@ function buildGeometry(catalog: StarCatalog): THREE.BufferGeometry {
   }
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions.subarray(0, visible * 3), 3));
-  geometry.setAttribute("color", new THREE.BufferAttribute(colours.subarray(0, visible * 3), 3));
+  geometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(positions.subarray(0, visible * 3), 3),
+  );
+  geometry.setAttribute(
+    "color",
+    new THREE.BufferAttribute(colours.subarray(0, visible * 3), 3),
+  );
   geometry.setAttribute("size", new THREE.BufferAttribute(sizes.subarray(0, visible), 1));
   // Bounding spheres over a 990 pc cloud are meaningless for culling and expensive to
   // compute; the field is always in view by definition.

@@ -14,8 +14,10 @@ import {
 
 describe("constants", () => {
   it("agrees with published values within tolerance", () => {
-    // Parsec, from the exact AU + arcsecond definition.
-    expect(PARSEC).toBeCloseTo(3.0856775814913673e16, -1);
+    // Parsec, from the exact AU + arcsecond definition. The published value has 17
+    // significant digits and a double holds ~16, so the literal here is the nearest
+    // representable one rather than the full published string.
+    expect(PARSEC).toBeCloseTo(3.085677581491367e16, -1);
     // Solar constant at 1 AU. Published value ~1361 W/m^2; we derive it, so a mismatch
     // here means the luminosity or AU has drifted.
     expect(SOLAR_CONSTANT).toBeGreaterThan(1355);

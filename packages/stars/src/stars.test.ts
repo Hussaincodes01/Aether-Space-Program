@@ -135,7 +135,11 @@ describe("photometry against published values", () => {
   });
 
   it("round-trips the distance modulus", () => {
-    for (const [m, d] of [[1.45, 2.64], [-5.85, 168], [4.83, 10]] as const) {
+    for (const [m, d] of [
+      [1.45, 2.64],
+      [-5.85, 168],
+      [4.83, 10],
+    ] as const) {
       expect(absoluteMagnitude(apparentMagnitude(m, d), d)).toBeCloseTo(m, 6);
     }
   });

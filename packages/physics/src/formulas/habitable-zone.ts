@@ -118,7 +118,10 @@ S_{\mathrm{eff}} = S_{\odot} + aT_\star + bT_\star^2 + cT_\star^3 + dT_\star^4`,
 /** All four boundaries. The UI draws two bands, conservative inside optimistic. */
 export function habitableZoneBounds(i: HabitableZoneInputs): HabitableZoneBounds {
   const at = (b: HabitableZoneBoundary): number =>
-    boundaryDistance(i.luminositySolar, effectiveFlux(COEFFICIENTS[b], i.effectiveTemperatureK));
+    boundaryDistance(
+      i.luminositySolar,
+      effectiveFlux(COEFFICIENTS[b], i.effectiveTemperatureK),
+    );
 
   return {
     recentVenusM: at("recentVenus"),
@@ -129,11 +132,7 @@ export function habitableZoneBounds(i: HabitableZoneInputs): HabitableZoneBounds
 }
 
 export type HabitableZonePosition =
-  | "too_hot"
-  | "optimistic_inner"
-  | "conservative"
-  | "optimistic_outer"
-  | "too_cold";
+  "too_hot" | "optimistic_inner" | "conservative" | "optimistic_outer" | "too_cold";
 
 export function habitableZonePosition(
   semimajorAxisM: number,

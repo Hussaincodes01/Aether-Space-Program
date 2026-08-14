@@ -32,8 +32,21 @@ const BYTES_PER_OBJECT = 28;
 const HEADER_BYTES = 16;
 
 const TYPE_MAP = {
-  G: 0, GPair: 1, GTrpl: 2, GGroup: 3, GCl: 4, OCl: 5, PN: 6,
-  EmN: 7, RfN: 8, DrkN: 9, HII: 10, SNR: 11, "Cl+N": 12, "*Ass": 13, Neb: 14,
+  G: 0,
+  GPair: 1,
+  GTrpl: 2,
+  GGroup: 3,
+  GCl: 4,
+  OCl: 5,
+  PN: 6,
+  EmN: 7,
+  RfN: 8,
+  DrkN: 9,
+  HII: 10,
+  SNR: 11,
+  "Cl+N": 12,
+  "*Ass": 13,
+  Neb: 14,
 };
 
 const METHOD = { unknown: 0, parallax: 1, redshift: 2 };
@@ -53,7 +66,7 @@ function parseDec(text) {
   const sign = text.trim().startsWith("-") ? -1 : 1;
   const [d, m, s] = text.replace("+", "").replace("-", "").split(":").map(Number);
   if ([d, m, s].some((v) => !Number.isFinite(v))) return null;
-  return sign * ((d + m / 60 + s / 3600) * Math.PI) / 180;
+  return (sign * ((d + m / 60 + s / 3600) * Math.PI)) / 180;
 }
 
 /** Galaxy-like OpenNGC types. These can never have a real trigonometric parallax. */
@@ -130,60 +143,58 @@ async function main() {
   let noPosition = 0;
 
   for (const { col, rows } of parsed) {
-  for (let i = 0; i < rows.length; i++) {
-    const f = rows[i].split(";");
-    const rawType = (f[col.Type] ?? "").trim();
+    for (let i = 0; i < rows.length; i++) {
+      const f = rows[i].split(";");
+      const rawType = (f[col.Type] ?? "").trim();
 
-    const type = TYPE_MAP[rawType];
-    if (type === undefined) {
-      skipped[rawType] = (skipped[rawType] ?? 0) + 1;
-      continue;
-    }
+      const type = TYPE_MAP[rawType];
+      if (type === undefined) {
+        skipped[rawType] = (skipped[rawType] ?? 0) + 1;
+        continue;
+      }
 
-    const ra = parseRa(f[col.RA] ?? "");
-    const dec = parseDec(f[col.Dec] ?? "");
-    if (ra === null || dec === null) {
-      noPosition++;
-      continue;
-    }
+      const ra = parseRa(f[col.RA] ?? "");
+      const dec = parseDec(f[col.Dec] ?? "");
+      if (ra === null || dec === null) {
+        noPosition++;
+        continue;
+      }
 
-    // Equatorial J2000 unit vector — the same convention the star catalogue uses, so the
-    // two layers register against each other without a frame conversion.
-    const cosDec = Math.cos(dec);
-    const x = cosDec * Math.cos(ra);
-    const y = cosDec * Math.sin(ra);
-    const z = Math.sin(dec);
+      // Equatorial J2000 unit vector — the same convention the star catalogue uses, so the
+      // two layers register against each other without a frame conversion.
+      const cosDec = Math.cos(dec);
+      const x = cosDec * Math.cos(ra);
+      const y = cosDec * Math.sin(ra);
+      const z = Math.sin(dec);
 
-    const vmag = Number(f[col["V-Mag"]]);
-    const majAx = Number(f[col.MajAx]);
-    const { mpc, method } = distanceMpc(
-      Number(f[col.Pax]),
-      Number(f[col.Redshift]),
-      rawType,
-    );
+      const vmag = Number(f[col["V-Mag"]]);
+      const majAx = Number(f[col.MajAx]);
+      const { mpc, method } = distanceMpc(Number(f[col.Pax]), Number(f[col.Redshift]), rawType);
 
-    objects.push({
-      x, y, z,
-      distanceMpc: mpc,
-      // 99 is the conventional "not measured" magnitude; keeping NaN out of the buffer
-      // means the renderer never has to test for it.
-      vmag: Number.isFinite(vmag) ? vmag : 99,
-      majAxArcmin: Number.isFinite(majAx) ? majAx : 0,
-      type,
-      method,
-    });
-
-    const messier = (f[col.M] ?? "").trim();
-    const common = (f[col["Common names"]] ?? "").trim();
-    if (messier || common) {
-      named.push({
-        i: objects.length - 1,
-        name: (f[col.Name] ?? "").trim(),
-        ...(messier ? { m: Number(messier) } : {}),
-        ...(common ? { common: common.split(",")[0].trim() } : {}),
+      objects.push({
+        x,
+        y,
+        z,
+        distanceMpc: mpc,
+        // 99 is the conventional "not measured" magnitude; keeping NaN out of the buffer
+        // means the renderer never has to test for it.
+        vmag: Number.isFinite(vmag) ? vmag : 99,
+        majAxArcmin: Number.isFinite(majAx) ? majAx : 0,
+        type,
+        method,
       });
+
+      const messier = (f[col.M] ?? "").trim();
+      const common = (f[col["Common names"]] ?? "").trim();
+      if (messier || common) {
+        named.push({
+          i: objects.length - 1,
+          name: (f[col.Name] ?? "").trim(),
+          ...(messier ? { m: Number(messier) } : {}),
+          ...(common ? { common: common.split(",")[0].trim() } : {}),
+        });
+      }
     }
-  }
   }
 
   // Brightest first: the renderer can then draw a prefix of the buffer as a quality tier

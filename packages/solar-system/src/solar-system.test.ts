@@ -114,9 +114,12 @@ describe("rotation matrices", () => {
       const col = [m[c]!, m[3 + c]!, m[6 + c]!];
       expect(Math.hypot(...col)).toBeCloseTo(1, 12);
     }
-    for (const [a, b] of [[0, 1], [1, 2], [0, 2]]) {
-      const dot =
-        m[a!]! * m[b!]! + m[3 + a!]! * m[3 + b!]! + m[6 + a!]! * m[6 + b!]!;
+    for (const [a, b] of [
+      [0, 1],
+      [1, 2],
+      [0, 2],
+    ]) {
+      const dot = m[a!]! * m[b!]! + m[3 + a!]! * m[3 + b!]! + m[6 + a!]! * m[6 + b!]!;
       expect(dot).toBeCloseTo(0, 12);
     }
   };
@@ -216,7 +219,7 @@ describe("positions", () => {
 
 describe("derived physical values match measurements", () => {
   it("reproduces surface gravity", () => {
-    expect(surfaceGravity(EARTH)).toBeCloseTo(9.80, 1);
+    expect(surfaceGravity(EARTH)).toBeCloseTo(9.8, 1);
     expect(surfaceGravity(MARS)).toBeCloseTo(3.72, 1);
     expect(surfaceGravity(MOON)).toBeCloseTo(1.62, 1);
   });
@@ -254,8 +257,10 @@ describe("derived physical values match measurements", () => {
  */
 describe("the generator reproduces worlds we have actually visited", () => {
   const enabledOn = (body: SolarBody): string[] =>
-    compileTerrainProgram({ context: toPlanetContext(body), seed: `sha256:${body.id}` })
-      .operators.map((o) => o.op);
+    compileTerrainProgram({
+      context: toPlanetContext(body),
+      seed: `sha256:${body.id}`,
+    }).operators.map((o) => o.op);
 
   it("gives the Moon craters, and no water, wind or ice erosion", () => {
     const ops = enabledOn(MOON);
@@ -289,8 +294,9 @@ describe("the generator reproduces worlds we have actually visited", () => {
 
   it("retains craters better on the Moon than on Earth", () => {
     const density = (body: SolarBody): number =>
-      compileTerrainProgram({ context: toPlanetContext(body), seed: "s" })
-        .operators.find((o) => o.op === "impact_population")?.params.density ?? 0;
+      compileTerrainProgram({ context: toPlanetContext(body), seed: "s" }).operators.find(
+        (o) => o.op === "impact_population",
+      )?.params.density ?? 0;
     expect(density(MOON)).toBeGreaterThan(density(EARTH));
   });
 

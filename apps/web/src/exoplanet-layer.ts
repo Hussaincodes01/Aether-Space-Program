@@ -49,7 +49,9 @@ export interface ExoplanetLayer {
   onReady: (listener: () => void) => void;
   update: (sunRelativeToCamera: THREE.Vector3) => void;
   /** Nearest system to a point given in parsecs from the Sun, for the HUD. */
-  nearestTo: (positionPc: THREE.Vector3) => { index: number; name: string; distancePc: number } | null;
+  nearestTo: (
+    positionPc: THREE.Vector3,
+  ) => { index: number; name: string; distancePc: number } | null;
   dispose: () => void;
 }
 

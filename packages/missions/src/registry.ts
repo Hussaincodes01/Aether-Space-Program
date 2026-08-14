@@ -38,9 +38,7 @@ export function missionsByStatus(status: MissionStatus): readonly Mission[] {
   return listMissions().filter((m) => m.status === status);
 }
 
-export function missionsWithTechnique(
-  technique: ObservationTechnique,
-): readonly Mission[] {
+export function missionsWithTechnique(technique: ObservationTechnique): readonly Mission[] {
   return listMissions().filter((m) =>
     m.instruments.some((i) => i.techniques.includes(technique)),
   );

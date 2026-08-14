@@ -39,19 +39,44 @@ export interface TerrainData {
 function icosphere(subdivisions: number): { dirs: Float32Array; indices: Uint32Array } {
   const t = (1 + Math.sqrt(5)) / 2;
   const vertices: number[][] = [
-    [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
-    [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
-    [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
+    [-1, t, 0],
+    [1, t, 0],
+    [-1, -t, 0],
+    [1, -t, 0],
+    [0, -1, t],
+    [0, 1, t],
+    [0, -1, -t],
+    [0, 1, -t],
+    [t, 0, -1],
+    [t, 0, 1],
+    [-t, 0, -1],
+    [-t, 0, 1],
   ].map(([x, y, z]) => {
     const l = Math.hypot(x!, y!, z!);
     return [x! / l, y! / l, z! / l];
   });
 
   let faces: number[][] = [
-    [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-    [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-    [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-    [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
+    [0, 11, 5],
+    [0, 5, 1],
+    [0, 1, 7],
+    [0, 7, 10],
+    [0, 10, 11],
+    [1, 5, 9],
+    [5, 11, 4],
+    [11, 10, 2],
+    [10, 7, 6],
+    [7, 1, 8],
+    [3, 9, 4],
+    [3, 4, 2],
+    [3, 2, 6],
+    [3, 6, 8],
+    [3, 8, 9],
+    [4, 9, 5],
+    [2, 4, 11],
+    [6, 2, 10],
+    [8, 6, 7],
+    [9, 8, 1],
   ];
 
   for (let s = 0; s < subdivisions; s++) {
@@ -282,7 +307,10 @@ export function generateTerrainData(request: TerrainRequest): TerrainData {
 
     const climate = context.tidallyLocked
       ? Math.acos(
-          Math.min(1, Math.max(-1, dx * substellarDir.x + dy * substellarDir.y + dz * substellarDir.z)),
+          Math.min(
+            1,
+            Math.max(-1, dx * substellarDir.x + dy * substellarDir.y + dz * substellarDir.z),
+          ),
         ) / Math.PI
       : Math.abs(Math.asin(Math.min(1, Math.max(-1, dy)))) / (Math.PI / 2);
 

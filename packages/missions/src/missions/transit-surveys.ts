@@ -77,10 +77,7 @@ export const k2 = defineMission({
 export const tess = defineMission({
   id: "tess",
   name: "TESS",
-  archiveFacilityNames: [
-    "Transiting Exoplanet Survey Satellite",
-    "TESS",
-  ],
+  archiveFacilityNames: ["Transiting Exoplanet Survey Satellite", "TESS"],
   agency: "NASA",
   status: "operational",
   startYear: 2018,

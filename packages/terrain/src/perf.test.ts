@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { EARTH, TRAPPIST_1E, compileTerrainProgram, evaluateTerrain, reliefRange } from "./index.js";
+import {
+  EARTH,
+  TRAPPIST_1E,
+  compileTerrainProgram,
+  evaluateTerrain,
+  reliefRange,
+} from "./index.js";
 
 /**
  * Cost guards for terrain evaluation.
@@ -26,7 +32,7 @@ describe("evaluation cost", () => {
   it("evaluates a full icosphere-5 vertex set in well under a second", () => {
     // Subdivision 5 is 10,242 vertices — what the client builds at startup.
     const ms = measure(10_242);
-    // eslint-disable-next-line no-console
+
     console.log(`  icosphere-5 (10,242 vertices): ${ms.toFixed(0)} ms`);
     expect(ms).toBeLessThan(4000);
   });
@@ -34,7 +40,7 @@ describe("evaluation cost", () => {
   it("scales roughly linearly with sample count", () => {
     const small = measure(2000);
     const large = measure(8000);
-    // eslint-disable-next-line no-console
+
     console.log(`  2,000: ${small.toFixed(0)} ms   8,000: ${large.toFixed(0)} ms`);
     // Four times the samples must not cost more than eight times the time.
     expect(large).toBeLessThan(small * 8 + 50);
@@ -48,7 +54,7 @@ describe("evaluation cost", () => {
       1500,
     );
     const ms = performance.now() - start;
-    // eslint-disable-next-line no-console
+
     console.log(`  reliefRange(1500): ${ms.toFixed(0)} ms`);
     expect(ms).toBeLessThan(1500);
   });

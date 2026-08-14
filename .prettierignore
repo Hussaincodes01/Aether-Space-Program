@@ -1,0 +1,5 @@
+dist
+node_modules
+*.bin
+pnpm-lock.yaml
+apps/web/public

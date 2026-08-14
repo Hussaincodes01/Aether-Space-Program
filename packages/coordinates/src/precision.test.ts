@@ -113,7 +113,11 @@ describe("frame tree", () => {
 describe("floating-origin camera", () => {
   it("does not move the camera in space when rebasing", () => {
     const universe = createUniverseRoot();
-    const system = attach(createFrame("system", AU * 100), universe, vec3(10 * LIGHT_YEAR, 0, 0));
+    const system = attach(
+      createFrame("system", AU * 100),
+      universe,
+      vec3(10 * LIGHT_YEAR, 0, 0),
+    );
     const planet = attach(createFrame("planet", earthRadii(1)), system, vec3(AU, 0, 0));
     const marker = attach(createFrame("marker", 1), planet, vec3(earthRadii(1), 0, 0));
 

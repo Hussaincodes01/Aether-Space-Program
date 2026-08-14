@@ -154,9 +154,10 @@ describe("presets", () => {
     const known = new Set(missionIds());
     for (const [id, preset] of Object.entries(MISSION_PRESETS)) {
       for (const missionId of preset.missions) {
-        expect(known.has(missionId), `preset "${id}" names unknown mission "${missionId}"`).toBe(
-          true,
-        );
+        expect(
+          known.has(missionId),
+          `preset "${id}" names unknown mission "${missionId}"`,
+        ).toBe(true);
       }
     }
   });

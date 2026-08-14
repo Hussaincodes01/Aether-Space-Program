@@ -42,18 +42,7 @@ export type Dimensionless = Brand<number, "1">;
  * JSON serialisation into the EnvironmentSpec, where the compiler cannot help us.
  */
 export type UnitTag =
-  | "m"
-  | "kg"
-  | "s"
-  | "K"
-  | "W"
-  | "m/s^2"
-  | "m/s"
-  | "kg/m^3"
-  | "Pa"
-  | "W/m^2"
-  | "rad"
-  | "1";
+  "m" | "kg" | "s" | "K" | "W" | "m/s^2" | "m/s" | "kg/m^3" | "Pa" | "W/m^2" | "rad" | "1";
 
 /**
  * Assert a raw number is already in the given SI unit.

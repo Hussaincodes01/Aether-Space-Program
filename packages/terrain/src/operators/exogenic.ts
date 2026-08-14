@@ -44,14 +44,24 @@ export const impactPopulation = defineOperator({
   references: [],
   layerOrder: 10,
   parameters: {
-    density: { min: 0, max: 1, default: 0.4, description: "Crater areal density, 1 = saturated." },
+    density: {
+      min: 0,
+      max: 1,
+      default: 0.4,
+      description: "Crater areal density, 1 = saturated.",
+    },
     degradation: {
       min: 0,
       max: 1,
       default: 0.3,
       description: "Erosional softening, 0 = fresh rims, 1 = ghost craters.",
     },
-    largestCraterKm: { min: 1, max: 2_000, default: 120, description: "Largest basin diameter." },
+    largestCraterKm: {
+      min: 1,
+      max: 2_000,
+      default: 120,
+      description: "Largest basin diameter.",
+    },
   },
   gate: (ctx) => {
     // Impacts always happen — Shoemaker-Levy 9 hit Jupiter. But a gas giant has nothing to
@@ -64,7 +74,10 @@ export const impactPopulation = defineOperator({
     const resurfacing = Math.min(1, heatFlux / 0.5);
     const erosion = ctx.stableLiquid !== "none" ? 0.5 : 0;
 
-    const retention = Math.max(0, 1 - atmosphericScreening * 0.5 - resurfacing * 0.6 - erosion * 0.4);
+    const retention = Math.max(
+      0,
+      1 - atmosphericScreening * 0.5 - resurfacing * 0.6 - erosion * 0.4,
+    );
 
     return {
       admissible: true,
@@ -113,7 +126,12 @@ export const aeolianTransport = defineOperator({
   references: [],
   layerOrder: 50,
   parameters: {
-    coverage: { min: 0, max: 1, default: 0.15, description: "Fraction covered by dune fields." },
+    coverage: {
+      min: 0,
+      max: 1,
+      default: 0.15,
+      description: "Fraction covered by dune fields.",
+    },
     duneHeightM: { min: 1, max: 400, default: 30, description: "Typical dune height." },
     wavelengthM: { min: 10, max: 5_000, default: 400, description: "Dune spacing." },
   },

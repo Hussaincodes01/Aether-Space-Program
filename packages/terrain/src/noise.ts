@@ -93,7 +93,8 @@ export function fbm(
   let normalisation = 0;
 
   for (let i = 0; i < octaves; i++) {
-    sum += amplitude * valueNoise3(x * frequency, y * frequency, z * frequency, seed + i * 7919);
+    sum +=
+      amplitude * valueNoise3(x * frequency, y * frequency, z * frequency, seed + i * 7919);
     normalisation += amplitude;
     amplitude *= gain;
     frequency *= lacunarity;

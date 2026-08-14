@@ -35,11 +35,27 @@ const DATA_DIR = join(HERE, "..", "data");
 
 const TAP = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync";
 const COLUMNS = [
-  "pl_name", "hostname", "sy_pnum", "ra", "dec", "sy_dist",
-  "st_teff", "st_rad", "st_mass", "st_lum",
-  "pl_rade", "pl_bmasse", "pl_orbper", "pl_orbsmax", "pl_orbeccen",
-  "pl_orbincl", "pl_eqt", "pl_dens",
-  "discoverymethod", "disc_year", "disc_facility",
+  "pl_name",
+  "hostname",
+  "sy_pnum",
+  "ra",
+  "dec",
+  "sy_dist",
+  "st_teff",
+  "st_rad",
+  "st_mass",
+  "st_lum",
+  "pl_rade",
+  "pl_bmasse",
+  "pl_orbper",
+  "pl_orbsmax",
+  "pl_orbeccen",
+  "pl_orbincl",
+  "pl_eqt",
+  "pl_dens",
+  "discoverymethod",
+  "disc_year",
+  "disc_facility",
 ];
 
 const SYSTEM_MAGIC = "AETHSYST";
@@ -89,11 +105,16 @@ function splitCsv(line) {
     const c = line[i];
     if (quoted) {
       if (c === '"') {
-        if (line[i + 1] === '"') { field += '"'; i++; } else quoted = false;
+        if (line[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else quoted = false;
       } else field += c;
     } else if (c === '"') quoted = true;
-    else if (c === ",") { out.push(field); field = ""; }
-    else field += c;
+    else if (c === ",") {
+      out.push(field);
+      field = "";
+    } else field += c;
   }
   out.push(field);
   return out;
