@@ -85,6 +85,27 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(jsdom@30.0.1)
 
+  packages/catalog:
+    dependencies:
+      '@aether/missions':
+        specifier: workspace:*
+        version: link:../missions
+      '@aether/physics':
+        specifier: workspace:*
+        version: link:../physics
+      '@aether/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@aether/terrain':
+        specifier: workspace:*
+        version: link:../terrain
+      '@aether/units':
+        specifier: workspace:*
+        version: link:../units
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
   packages/coordinates:
     dependencies:
       '@aether/units':

@@ -1,0 +1,29 @@
+{
+  "name": "@aether/catalog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed, provenance-carrying catalog ingestion and the PlanetModel pipeline",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@aether/missions": "workspace:*",
+    "@aether/physics": "workspace:*",
+    "@aether/schema": "workspace:*",
+    "@aether/terrain": "workspace:*",
+    "@aether/units": "workspace:*",
+    "zod": "^3.24.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
