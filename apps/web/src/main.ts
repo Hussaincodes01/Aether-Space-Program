@@ -54,9 +54,38 @@ import { createProvenancePanel } from "./provenance-panel.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
 import { createMissionPanel } from "./mission-panel.js";
+import {
+  createCatalogPanel,
+  DEFAULT_SELECTION,
+  type CatalogSelection,
+} from "./catalog-panel.js";
+import { createModelInspector } from "./model-inspector.js";
+import { createErrorPanel, webglSupportMessage } from "./error-panel.js";
+import { buildPlanetModel, type PlanetModel } from "@aether/catalog";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
+
+/**
+ * Errors go on screen, not only into the console.
+ *
+ * Created before anything that can fail, because the first thing that can fail is the
+ * renderer itself and a WebGL exception otherwise leaves a blank page with a message the
+ * user will never look for.
+ */
+const errorPanel = createErrorPanel();
+document.body.appendChild(errorPanel.element);
+
+const webglProblem = webglSupportMessage();
+if (webglProblem) {
+  errorPanel.report({
+    severity: "error",
+    title: "WebGL 2 is not available",
+    detail: webglProblem,
+    suggestion: "Everything else on this page is static; the 3D view cannot start.",
+  });
+  throw new Error(webglProblem);
+}
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -130,6 +159,10 @@ missionPanel.onChange((profile) => {
   // Reconnected: changing the mission selection now changes what the world looks like,
   // rather than only a number in the HUD.
   applyEvidence();
+  // The catalog counts and the planet model are both functions of the evidence, so they
+  // are recomputed rather than left showing what a different selection implied.
+  catalogPanel.setEvidence(profile);
+  rebuildModel();
 });
 
 // ── Interstellar travel ─────────────────────────────────────────────────────────────────
@@ -139,6 +172,57 @@ document.body.appendChild(starMap.element);
 
 const bodyList = createBodyList();
 document.body.appendChild(bodyList.element);
+
+// -- The modelled catalog -----------------------------------------------------------------
+
+/**
+ * The catalog-driven half of the application.
+ *
+ * Distinct from the interstellar map on purpose. The map covers 4,722 systems as positions
+ * and names; this covers the handful with a full PlanetModel -- sourced measurements,
+ * derived physics, an interrogable surface hypothesis. Blurring the two would let a system
+ * we know almost nothing about look as authoritative as TRAPPIST-1.
+ */
+const catalogPanel = createCatalogPanel(missionPanel.getProfile());
+document.body.appendChild(catalogPanel.element);
+
+const modelInspector = createModelInspector();
+document.body.appendChild(modelInspector.element);
+
+let currentSelection: CatalogSelection = DEFAULT_SELECTION;
+let currentModel: PlanetModel | null = null;
+
+/**
+ * Rebuild the model for the selected planet under the current evidence.
+ *
+ * Called on selection change and on every mission change, because the evidence profile is
+ * an input to the model rather than a filter applied afterwards -- that is what makes
+ * deselecting a mission change the world rather than just the HUD.
+ */
+function rebuildModel(): void {
+  try {
+    currentModel = buildPlanetModel(
+      currentSelection.systemId,
+      currentSelection.planetId,
+      missionPanel.getProfile(),
+    );
+    if (modelInspector.visible) modelInspector.show(currentModel);
+  } catch (error) {
+    currentModel = null;
+    errorPanel.reportThrown(
+      error,
+      `Building ${currentSelection.systemId} ${currentSelection.planetId}`,
+    );
+  }
+}
+
+catalogPanel.onSelect((selection) => {
+  currentSelection = selection;
+  rebuildModel();
+  if (currentModel) modelInspector.show(currentModel);
+});
+
+rebuildModel();
 
 /**
  * Travel to a Solar System body.
@@ -290,6 +374,7 @@ function inspectNearest(): void {
 const panels = {
   starmap: starMap.element,
   bodies: bodyList.element,
+  catalog: catalogPanel.element,
   missions: missionPanel.element,
   provenance: provenance.element,
   hud: document.getElementById("hud"),
@@ -306,10 +391,14 @@ function toggleAllUi(): void {
   uiHidden = !uiHidden;
   setPanel(panels.starmap, !uiHidden);
   setPanel(panels.bodies, !uiHidden);
+  setPanel(panels.catalog, !uiHidden);
   setPanel(panels.missions, !uiHidden);
   setPanel(panels.hud, !uiHidden);
   setPanel(panels.help, !uiHidden);
-  if (uiHidden) provenance.hide();
+  if (uiHidden) {
+    provenance.hide();
+    modelInspector.hide();
+  }
 }
 
 function togglePanel(el: HTMLElement | null): void {
@@ -341,6 +430,15 @@ window.addEventListener("keydown", (event) => {
       break;
     case "KeyB":
       togglePanel(panels.bodies);
+      break;
+    case "KeyC":
+      togglePanel(panels.catalog);
+      break;
+    case "KeyP":
+      // The model inspector, as distinct from I, which inspects whatever the camera is
+      // nearest in the live scene.
+      if (modelInspector.visible) modelInspector.hide();
+      else if (currentModel) modelInspector.show(currentModel);
       break;
     default:
       break;

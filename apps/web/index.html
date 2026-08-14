@@ -554,6 +554,200 @@
         font-size: 12px;
       }
 
+      /* -- Evidence badges -------------------------------------------------------------
+         One class per badge word. Colour and word live together in badges.ts and here, so
+         they cannot drift: a MEASURED value rendered in the amber of a hypothesis would be
+         a lie told in CSS. */
+      .badge-measured {
+        color: #5ee0ff;
+        border: 1px solid rgba(94, 224, 255, 0.4);
+      }
+      .badge-derived {
+        color: #7ee081;
+        border: 1px solid rgba(126, 224, 129, 0.4);
+      }
+      .badge-inferred {
+        color: #b79bff;
+        border: 1px solid rgba(183, 155, 255, 0.4);
+      }
+      .badge-hypothesis {
+        color: #ffb454;
+        border: 1px solid rgba(255, 180, 84, 0.45);
+      }
+      .badge-placeholder {
+        color: #8ba4c9;
+        border: 1px dashed rgba(139, 164, 201, 0.45);
+      }
+      /* Unknown is the loudest badge in the set on purpose. The temptation is always to
+         show something instead of nothing, and this is the visual counterweight. */
+      .badge-unknown {
+        color: #ff7b7b;
+        border: 1px solid rgba(255, 123, 123, 0.45);
+        background: rgba(255, 123, 123, 0.08);
+      }
+      .pv-src {
+        font-size: 10px;
+        color: #6f8ab5;
+      }
+      a.pv-src:hover {
+        color: #9fc4f5;
+      }
+      .pv-unc {
+        font-size: 10px;
+        color: #6f8ab5;
+      }
+      .pv-close {
+        float: right;
+        background: none;
+        border: none;
+        color: #8ba4c9;
+        font-size: 18px;
+        cursor: pointer;
+        line-height: 1;
+      }
+      .pv-close:hover {
+        color: #eaf3ff;
+      }
+
+      /* -- Catalog panel -- */
+      #catalog {
+        position: fixed;
+        top: 16px;
+        right: 362px;
+        bottom: 56px;
+        width: 300px;
+        z-index: 20;
+        overflow-y: auto;
+        padding: 14px 16px;
+        background: rgba(6, 10, 20, 0.88);
+        border: 1px solid rgba(120, 170, 255, 0.22);
+        border-radius: 8px;
+        backdrop-filter: blur(8px);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(120, 170, 255, 0.3) transparent;
+      }
+      #catalog h1 {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #6f8ab5;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .cat-intro {
+        color: #6f8ab5;
+        font-size: 10px;
+        line-height: 1.5;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(120, 170, 255, 0.14);
+      }
+      .cat-system {
+        margin-bottom: 14px;
+      }
+      .cat-system h2 {
+        font-size: 11px;
+        color: #d8e8ff;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .cat-dist {
+        font-size: 10px;
+        color: #5a739c;
+        font-weight: 400;
+      }
+      .cat-blurb {
+        font-size: 10px;
+        color: #6f8ab5;
+        line-height: 1.4;
+        margin: 2px 0 6px;
+      }
+      .cat-planet {
+        display: block;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+        background: none;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 7px;
+        margin-bottom: 1px;
+      }
+      .cat-planet:hover {
+        background: rgba(90, 140, 210, 0.15);
+      }
+      .cat-planet.current {
+        background: rgba(94, 168, 255, 0.2);
+        outline: 1px solid rgba(120, 170, 255, 0.4);
+      }
+      .cat-name {
+        display: block;
+        color: #d8e8ff;
+        font-size: 12px;
+      }
+      .cat-meta {
+        display: block;
+        color: #6f8ab5;
+        font-size: 10px;
+      }
+
+      /* -- Error panel --
+         Bottom-centre and non-modal. A failure to build one planet must not stop you flying
+         to another, so this never blocks the canvas. */
+      #errors {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 560px;
+        z-index: 30;
+        padding: 12px 16px;
+        background: rgba(28, 10, 12, 0.94);
+        border: 1px solid rgba(255, 123, 123, 0.4);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+      }
+      #errors h1 {
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #ff9b9b;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .err {
+        padding: 6px 0;
+        border-top: 1px solid rgba(255, 123, 123, 0.16);
+      }
+      .err-title {
+        color: #ffd0d0;
+        font-size: 12px;
+      }
+      .err-detail {
+        color: #d9a9a9;
+        font-size: 11px;
+        line-height: 1.45;
+        margin-top: 2px;
+      }
+      .err-hint {
+        color: #8ba4c9;
+        font-size: 11px;
+        line-height: 1.45;
+        margin-top: 4px;
+      }
+      .err-close {
+        float: right;
+        background: none;
+        border: none;
+        color: #d9a9a9;
+        font-size: 18px;
+        cursor: pointer;
+        line-height: 1;
+      }
+
       /* -- Mission selector -- */
       /* Above the overlay (z-index 10) so the selector stays usable when the mouse is
          released with Escape, rather than being greyed out and unclickable. */
@@ -691,8 +885,8 @@
       <b>W A S D</b> move &nbsp; <b>R / F</b> up / down &nbsp; <b>Q / E</b> roll &nbsp;
       <b>Shift</b> boost &nbsp; <b>Space</b> brake &nbsp; <b>Wheel</b> throttle &nbsp;
       <b>Esc</b> release mouse &nbsp; <b>Home</b> Solar System &nbsp; <b>I</b> provenance &nbsp;
-      <b>U</b> hide all panels &nbsp; <b>B</b> bodies &nbsp; <b>K</b> map &nbsp;
-      <b>M</b> missions
+      <b>U</b> hide all panels &nbsp; <b>B</b> bodies &nbsp; <b>C</b> catalog &nbsp;
+      <b>P</b> provenance &nbsp; <b>K</b> map &nbsp; <b>M</b> missions
       <p>
         Scroll to set throttle — it is the control, and the ceiling rises as you climb away from
         a surface, so keep scrolling up as you leave. Press <b>U</b> to clear the panels and
