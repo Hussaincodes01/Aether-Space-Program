@@ -2,15 +2,24 @@
 
 ## **Aether** — Distance-Accurate Exoplanet Visualization with AI-Constrained Surface Generation
 
-|                   |                                                                                                                       |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **Version**       | 2.1 — consolidates PRD v2.0 with the v1.2 technical addendum                                                          |
-| **Date**          | 2026-08-03                                                                                                            |
-| **Status**        | Approved direction; week-1 decisions outstanding (§18)                                                                |
-| **Team**          | 1 game developer · 2 AI developers · 1 lead (product / data / backend)                                                |
-| **Renderer**      | **Three.js + TypeScript.** WebGPURenderer + TSL preferred; WebGL2 reduced-quality fallback.                           |
-| **Primary claim** | Accurate astronomical positions, distances and orbits; **scientifically constrained** — not reconstructed — surfaces. |
-| **First release** | 16 weeks (team of four); ~28 weeks part-time                                                                          |
+|                   |                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Version**       | 2.1 — consolidates PRD v2.0 with the v1.2 technical addendum                                                             |
+| **Date**          | 2026-08-03                                                                                                               |
+| **Status**        | Approved direction. Implementation status and remaining limitations: see the Status section of [README.md](../README.md) |
+| **Team**          | 1 game developer · 2 AI developers · 1 lead (product / data / backend)                                                   |
+| **Renderer**      | **Three.js + TypeScript.** WebGPURenderer + TSL preferred; WebGL2 reduced-quality fallback.                              |
+| **Primary claim** | Accurate astronomical positions, distances and orbits; **scientifically constrained** — not reconstructed — surfaces.    |
+| **First release** | 16 weeks (team of four); ~28 weeks part-time                                                                             |
+
+> **Implementation status, 2026-08-14.** The pipeline this document specifies is connected
+> end to end: typed catalog with provenance, mission evidence gating, physics derivations,
+> inference for the gaps, a terrain hypothesis, and a provenance inspector. What is _not_
+> done is recorded honestly rather than quietly: reversed-Z is built but not wired, depth
+> partitioning is opt-in pending a performance measurement on real hardware, the typed
+> catalog is three systems, there is one inference prior, no LLM composer is plugged into
+> the containment boundary, and no terrain has been scored against a real Solar System map.
+> See the README Status section and docs/ for the detail.
 
 > **Document history.** v2.0 consolidated six planning documents and the original PRD.
 > v2.1 integrates the v1.2 addendum, which supersedes v2.0 on the renderer, the data model,

@@ -150,6 +150,7 @@ apps/
   web/            Three.js client — the only package that knows about rendering
 
 packages/
+  catalog/        Typed seed data with provenance -> derived physics -> PlanetModel
   exoplanets/     Every confirmed system, mapped, with priors for what was never measured
   deepsky/        Galaxies, clusters and nebulae (OpenNGC) + derived distances
   stars/          Real star catalogue (HYG) + physical photometry
@@ -236,6 +237,9 @@ corepack enable    # pnpm at the exact version in packageManager
 **Controls:** `W A S D` move · `R` / `F` up and down · `Shift` boost · mouse wheel throttle ·
 `Esc` release the mouse.
 
+**Panels:** `C` catalog · `P` provenance · `B` Solar System bodies · `K` interstellar map ·
+`M` missions · `G` precision overlay · `U` hide everything and fly.
+
 Watch the **local coords** readout in the HUD. It stays small no matter how far the camera
 is from the origin — that is frame rebasing doing its job. If it ever climbs past ~1e12 m,
 the f32 upload will start to jitter and something has broken.
@@ -270,47 +274,73 @@ credibility from whether Mars looks like Mars.
 
 ## Status
 
-**Week 1–2 of the plan in [`docs/PRD.md`](docs/PRD.md): the multi-scale precision spike.**
+Everything below is in the repository, tested, and building. **459 tests** across twelve
+packages; `pnpm check` runs lint, typecheck, tests and the full build.
 
-<sub><i>All seven TRAPPIST-1 planets orbit closer than Mercury. NASA/JPL-Caltech, public domain.</i></sub>
+### The pipeline is connected end to end
 
-Working today:
+```
+catalog seed  ->  SI + provenance  ->  mission evidence gate  ->  physics derivations
+              ->  inference for the gaps  ->  terrain hypothesis  ->  visual parameters
+```
+
+`buildPlanetModel(systemId, planetId, evidenceProfile)` produces every number the renderer
+uses, and each one can name its own origin. See
+[`docs/catalog-ingestion.md`](docs/catalog-ingestion.md).
+
+### Working today
 
 - ✅ f64 hierarchical frames, floating-origin camera, rebasing with hysteresis
+- ✅ **Typed catalog** — TRAPPIST-1 (all seven), Proxima Centauri b, Sun/Earth/Mars. Every
+  value names its unit and a source that must resolve, or ingestion fails
+- ✅ **Earth as the pipeline's own unit test** — density 5514 kg/m³, gravity 9.80 m/s²,
+  escape velocity 11.19 km/s, insolation 1361 W/m², equilibrium temperature 254 K
 - ✅ Physics registry — equilibrium temperature, insolation, density, gravity, escape
   velocity, scale height, Jeans parameter, Kopparapu habitable zone, blackbody colour
 - ✅ Three-layer contract with structurally enforced LLM containment
-- ✅ Terrain operators with physics gates **and height evaluation** — craters with rims and
-  ejecta, shield volcanoes on flood-basalt provinces, fracture networks, transverse dune
-  fields, dendritic valley incision, ice caps that follow the actual cold trap
-- ✅ Displaced planet geometry with computed normals and physics-driven surface colour
+- ✅ **Resolver enforces its own contract** — dimensional compatibility and physical domain
+  checked on every value, rejections reported rather than swallowed
+- ✅ **Terrain validates by construction** — one entry point that cannot be bypassed, typed
+  errors in strict mode, unknown operators and parameters recorded
+- ✅ Terrain operators with physics gates and height evaluation — craters with rims and
+  ejecta, shield volcanoes, fracture networks, dune fields, valley incision, ice caps
+- ✅ **Provenance inspector** (P) — six badges, unknowns rendered rather than dropped,
+  processes ruled out listed beside those present
+- ✅ **Catalog panel** (C) with per-planet measured/unknown counts under the current missions
+- ✅ **Precision overlay** (G) — frame, local coordinates, rebase flag, f32 limit warning
 - ✅ Rayleigh/Mie atmospheric scattering, coefficients derived from mean molecular weight
-- ✅ Star field with a realistic luminosity function and true blackbody colours
-- ✅ Real Solar System: J2000 orbital elements, explicit rotation matrices, Newton-solved
-  Kepler equation, validated against published periods and distances
-- ✅ **Real sky**: 109,389 stars at measured parallax distances from HYG (Hipparcos, Yale,
-  Gliese) — the same catalogues OpenSpace draws on, under a redistributable licence
-- ✅ **Deep sky**: 12,160 galaxies, clusters and nebulae from OpenNGC, 10,568 at distances
-  derived from redshift or parallax, coloured by emission physics
-- ✅ **Every confirmed exoplanet**: 6,309 planets in 4,722 systems from the NASA Exoplanet
-  Archive, mapped from Proxima Centauri at 1.30 pc to SWEEPS-11 at 8,500 pc, with a prior
-  chain filling what was never measured and labelling every fill
-- ✅ **Interstellar travel**: search any of the 4,722 systems and go there. The system is
-  built on arrival — real orbits, terrain generated live from real parameters — and torn
-  down on departure
-- ✅ **Provenance inspector** (press `I`): every value with its evidence class, confidence,
-  formula and caveat — and _why absent features are absent_, straight from the gate that
-  refused them
-- ✅ Live terrain generation on approach, released on departure, so memory stays bounded
-- ✅ Mission registry and evidence model, wired to the rendered speculation rim
-- ✅ Off-thread terrain generation with progressive refinement — a coarse world appears in
-  ~20 ms, then sharpens to ~41k vertices without the tab ever freezing
-- ✅ Frame-rate-independent camera damping and look smoothing
-- ✅ **244 tests**, including the two merge gates the PRD requires and cost guards on
-  terrain evaluation
+- ✅ Real Solar System — 36 bodies: Sun, eight planets, 17 major moons, six dwarf planets,
+  ring systems. Every orbit validated against published sidereal periods
+- ✅ **Real sky**: 109,389 stars at measured parallax distances from HYG
+- ✅ **Deep sky**: 12,160 galaxies, clusters and nebulae from OpenNGC
+- ✅ **Every confirmed exoplanet**: 6,309 planets in 4,722 systems, mapped
+- ✅ **Interstellar travel**: search any of the 4,722 systems and go there
+- ✅ Typed errors surfaced in the UI, plus a WebGL 2 pre-flight check
 
-Not built yet: real archive ingestion, chunked LOD for close approach, retrieval ML, the
-hypothesis ensemble UI, and the game layer. See the PRD for sequencing.
+### Honest limitations
+
+These are real and stated rather than buried:
+
+| Limitation                             | Detail                                                                                                                                                                                                                                                                                             |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Depth partitioning is opt-in**       | `?depth=partitioned` works and is tested, but four full scene passes have not been measured on real hardware from this environment. The default remains the single-pass logarithmic buffer, which has been looked at on a screen. See [`docs/rendering-precision.md`](docs/rendering-precision.md) |
+| **Reversed-Z is built, not wired**     | Three.js does not expose the depth clear and comparison controls to drive it through its standard path                                                                                                                                                                                             |
+| **The typed catalog is three systems** | The 4,722-system map is separate and shallower: names, distances, positions. Only catalog systems have a full interrogable model                                                                                                                                                                   |
+| **One inference prior**                | Chen & Kipping mass-radius. Enough for Proxima b; not a full inference layer                                                                                                                                                                                                                       |
+| **No LLM composer yet**                | The containment boundary is built and tested. Nothing is plugged into it                                                                                                                                                                                                                           |
+| **No browser-based screenshots in CI** | Scene assembly is tested headlessly (frame parenting, ring ownership, body counts) but pixels are not                                                                                                                                                                                              |
+| **Terrain is uncalibrated**            | The gates reproduce the Solar System qualitatively. Nothing yet scores generated terrain against real Mars or Moon maps                                                                                                                                                                            |
+
+### Further reading
+
+| Document                                                     | Covers                                                             |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| [`docs/provenance.md`](docs/provenance.md)                   | The data model, unit/domain checking, the resolution chain, badges |
+| [`docs/catalog-ingestion.md`](docs/catalog-ingestion.md)     | Seed data rules, the pipeline, determinism, adding a system        |
+| [`docs/mission-evidence.md`](docs/mission-evidence.md)       | What mission selection may and may not change                      |
+| [`docs/terrain-safety.md`](docs/terrain-safety.md)           | Gates, warnings, strict mode, why terrain cannot affect physics    |
+| [`docs/rendering-precision.md`](docs/rendering-precision.md) | f64 frames, the f32 limit, depth strategies                        |
+| [`docs/PRD.md`](docs/PRD.md)                                 | The original specification                                         |
 
 ### About that terrain
 
