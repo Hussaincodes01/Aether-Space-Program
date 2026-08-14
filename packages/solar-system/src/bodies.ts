@@ -323,7 +323,8 @@ export const NEPTUNE: SolarBody = {
   blurb: "Fastest winds in the Solar System, over 500 m/s.",
 };
 
-export const SOLAR_SYSTEM: readonly SolarBody[] = [
+/** The eight planets, the Sun and Earth's Moon. Moons and dwarfs are added in `index.ts`. */
+export const CORE_BODIES: readonly SolarBody[] = [
   SUN,
   MERCURY,
   VENUS,
@@ -336,13 +337,14 @@ export const SOLAR_SYSTEM: readonly SolarBody[] = [
   NEPTUNE,
 ];
 
-export function getBody(id: string): SolarBody | undefined {
-  return SOLAR_SYSTEM.find((b) => b.id === id);
-}
-
-/** Bodies with a solid surface worth generating terrain for. */
-export function terrestrialBodies(): readonly SolarBody[] {
-  return SOLAR_SYSTEM.filter(
+/**
+ * Bodies with a solid surface worth generating terrain for.
+ *
+ * Takes the list as an argument so it works over whichever set the caller has - the core
+ * ten, or the full system with moons and dwarfs.
+ */
+export function solidSurfaceBodies(bodies: readonly SolarBody[]): readonly SolarBody[] {
+  return bodies.filter(
     (b) => b.kind !== "star" && b.massKg / ((4 / 3) * Math.PI * b.radiusM ** 3) > 1500,
   );
 }

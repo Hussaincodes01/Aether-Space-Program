@@ -49,6 +49,7 @@ import {
   type ExoSystem,
 } from "./exo-system.js";
 import { createInterstellarMap } from "./interstellar-map.js";
+import { createBodyList } from "./body-list.js";
 import { createProvenancePanel } from "./provenance-panel.js";
 import { createControls } from "./controls.js";
 import { renderHud, renderWatermark } from "./hud.js";
@@ -135,6 +136,36 @@ missionPanel.onChange((profile) => {
 
 const starMap = createInterstellarMap();
 document.body.appendChild(starMap.element);
+
+const bodyList = createBodyList();
+document.body.appendChild(bodyList.element);
+
+/**
+ * Travel to a Solar System body.
+ *
+ * The camera is placed in the body's own frame rather than offset from the Sun, so the
+ * floating-origin machinery keeps full precision right down to the surface. Standoff scales
+ * with radius: three radii out frames the Sun and Ganymede equally well, which a fixed
+ * distance in kilometres cannot do across four orders of magnitude of body size.
+ */
+function travelToBody(bodyId: string): void {
+  const entry = scene.bodies.get(bodyId);
+  if (!entry) return;
+
+  // Leave any exoplanet system first, or the camera keeps a frame that is about to be freed.
+  if (activeSystem) {
+    activeSystem.dispose();
+    activeSystem = null;
+    starMap.setCurrent(null);
+  }
+
+  const standoff = entry.data.radiusM * 3.2;
+  camera.frame = entry.frame;
+  camera.position = { x: standoff, y: standoff * 0.35, z: standoff * 0.2 };
+  controls.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
+}
+
+bodyList.onTravel(travelToBody);
 
 /** The exoplanet system the camera is currently inside, if any. */
 let activeSystem: ExoSystem | null = null;
@@ -256,6 +287,7 @@ function inspectNearest(): void {
  */
 const panels = {
   starmap: starMap.element,
+  bodies: bodyList.element,
   missions: missionPanel.element,
   provenance: provenance.element,
   hud: document.getElementById("hud"),
@@ -271,6 +303,7 @@ function setPanel(el: HTMLElement | null, visible: boolean): void {
 function toggleAllUi(): void {
   uiHidden = !uiHidden;
   setPanel(panels.starmap, !uiHidden);
+  setPanel(panels.bodies, !uiHidden);
   setPanel(panels.missions, !uiHidden);
   setPanel(panels.hud, !uiHidden);
   setPanel(panels.help, !uiHidden);
@@ -303,6 +336,9 @@ window.addEventListener("keydown", (event) => {
       break;
     case "KeyK":
       togglePanel(panels.starmap);
+      break;
+    case "KeyB":
+      togglePanel(panels.bodies);
       break;
     default:
       break;
@@ -385,6 +421,12 @@ function detachAtmosphere(): void {
   atmosphereBodyId = null;
 }
 
+/** RingGeometry lies in the XY plane; the equatorial plane is XZ. */
+const RING_PLANE_TO_EQUATOR = new THREE.Quaternion().setFromAxisAngle(
+  new THREE.Vector3(1, 0, 0),
+  Math.PI / 2,
+);
+
 const TERRAIN_EXAGGERATION = 25;
 
 /**
@@ -434,6 +476,16 @@ function frame(now: number): void {
     // Axial tilt is kept — it is measured — but the spin term is frozen at zero.
     entry.mesh.quaternion.copy(bodyOrientation(entry.data, FROZEN ? 0 : scene.timeS));
 
+    if (entry.rings) {
+      // Rings share the planet's centre and its axial tilt, but never its spin: the ring
+      // plane is fixed by the planet's equator, and the particles orbit within it. Saturn's
+      // rings do not turn once per Saturn day.
+      entry.rings.position.copy(entry.mesh.position);
+      entry.rings.quaternion
+        .copy(bodyOrientation(entry.data, 0))
+        .multiply(RING_PLANE_TO_EQUATOR);
+    }
+
     if (entry.orbitLine) {
       const parent = scene.bodies.get(entry.data.parentId ?? "sun");
       if (parent) {
@@ -472,6 +524,10 @@ function frame(now: number): void {
   const altitudeM = activeSystem ? exoAltitudeM : (nearest?.altitudeM ?? 1e9);
   exoNearestName = exoNearest?.name ?? null;
   nearestEntry = nearest?.entry ?? null;
+
+  // Keep the gazetteer's highlight on wherever you actually are, including when you arrive
+  // somewhere by flying rather than by clicking. It re-renders only when the answer changes.
+  bodyList.setCurrent(activeSystem ? null : (nearestEntry?.data.id ?? null));
 
   // 3. Camera, then rebase with hysteresis so a hovering camera cannot flip frames.
   // The flight model wants distance to the nearest *surface*: it sets the throttle

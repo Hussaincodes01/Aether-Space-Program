@@ -11,7 +11,9 @@
 import { ATOMIC_MASS_UNIT, BOLTZMANN, EARTH_MASS, EARTH_RADIUS, GRAVITATIONAL_CONSTANT } from "@aether/units";
 import type { PlanetContext } from "@aether/terrain";
 import { meanMotion } from "./kepler.js";
-import { getBody, type SolarBody } from "./bodies.js";
+import { CORE_BODIES, type SolarBody } from "./bodies.js";
+import { MAJOR_MOONS } from "./moons.js";
+import { DWARF_PLANETS } from "./dwarf-planets.js";
 
 /** Earth's mean surface heat flux from radiogenic decay, W/m². */
 const EARTH_RADIOGENIC_FLUX = 0.087;
@@ -98,7 +100,8 @@ export function toPlanetContext(body: SolarBody): PlanetContext {
 }
 
 export function contextFor(bodyId: string): PlanetContext | undefined {
-  const body = getBody(bodyId);
+  // Searched locally rather than through index.ts, which imports this file.
+  const body = [...CORE_BODIES, ...MAJOR_MOONS, ...DWARF_PLANETS].find((b) => b.id === bodyId);
   return body ? toPlanetContext(body) : undefined;
 }
 

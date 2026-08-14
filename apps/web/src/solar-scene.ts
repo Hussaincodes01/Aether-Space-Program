@@ -20,9 +20,11 @@ import {
   getBody,
   orbitalPeriod,
   perifocalToEcliptic,
+  ringsFor,
   sampleOrbit,
   stateAt,
   toPlanetContext,
+  type RingSystem,
   type Mat3,
   type SolarBody,
 } from "@aether/solar-system";
@@ -48,6 +50,8 @@ export interface SceneBody {
   terrain?: PlanetMeshResult;
   /** Placeholder geometry, kept so it can be restored when terrain is released. */
   placeholderGeometry: THREE.BufferGeometry;
+  /** Ring plane, for the four giants. Positioned with the body each frame. */
+  rings?: THREE.Mesh;
 }
 
 export interface SolarScene {
@@ -119,6 +123,44 @@ function bodySphere(body: SolarBody): THREE.Mesh {
   return mesh;
 }
 
+/**
+ * A ring system, as an annulus in the planet's equatorial plane.
+ *
+ * Rings are drawn double-sided and unlit. Real ring particles scatter light forward, so the
+ * far side of a ring seen against the Sun is *brighter* than the near side — a lit material
+ * gets that backwards and makes the shadowed half vanish, which is the usual tell of a
+ * ring rendered without thinking about it.
+ */
+function ringMesh(ring: RingSystem): THREE.Mesh {
+  const geometry = new THREE.RingGeometry(ring.innerRadiusM, ring.outerRadiusM, 192, 1);
+
+  // RingGeometry's default UVs are unusable for a radial gradient; rebuild v as the
+  // normalised radius so any future ring texture bands correctly from inner to outer edge.
+  const pos = geometry.attributes.position as THREE.BufferAttribute;
+  const uv = geometry.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const r = Math.hypot(pos.getX(i), pos.getY(i));
+    const t = (r - ring.innerRadiusM) / (ring.outerRadiusM - ring.innerRadiusM);
+    uv.setXY(i, t, 0.5);
+  }
+  uv.needsUpdate = true;
+
+  const mesh = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({
+      color: ring.tintHex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: ring.opacity,
+      depthWrite: false,
+    }),
+  );
+  // Orientation is set from the planet's tilt each frame in the render loop.
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 1;
+  return mesh;
+}
+
 function orbitLine(body: SolarBody, colour: number): THREE.Line | undefined {
   if (!body.elements) return undefined;
 
@@ -126,7 +168,13 @@ function orbitLine(body: SolarBody, colour: number): THREE.Line | undefined {
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   const line = new THREE.Line(
     geometry,
-    new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.22 }),
+    new THREE.LineBasicMaterial({
+      color: colour,
+      transparent: true,
+      // Nineteen moon orbits at planetary scale are visual noise; they only need to read
+      // once the camera is close enough for the planet to fill the view.
+      opacity: body.kind === "moon" ? 0.1 : 0.22,
+    }),
   );
   line.frustumCulled = false;
   return line;
@@ -169,6 +217,12 @@ export function buildSolarScene(startTimeS = 0): SolarScene {
       terrainState: "placeholder",
       placeholderGeometry: mesh.geometry,
     };
+
+    const ring = ringsFor(data.id);
+    if (ring) {
+      entry.rings = ringMesh(ring);
+      three.add(entry.rings);
+    }
 
     if (entry.orbitLine) three.add(entry.orbitLine);
     bodies.set(data.id, entry);
