@@ -166,13 +166,37 @@ export interface CompiledOperator {
   confidence: number;
 }
 
-export interface CompileWarning {
-  op: string;
-  parameter: string;
-  requested: number;
-  clamped: number;
-  bound: "min" | "max";
-}
+/**
+ * Something the compiler had to correct, kept rather than discarded.
+ *
+ * A discriminated union because the four cases mean genuinely different things and a caller
+ * that treats them alike will mislead somebody. A clamp says a proposal overreached and was
+ * pulled back to the physically admissible range. An unknown operator says a model invented
+ * a geological process that does not exist. Those deserve different words in the inspector
+ * and, in strict mode, different outcomes.
+ */
+export type CompileWarning =
+  /** A proposed parameter fell outside the operator's admissible range and was clamped. */
+  | {
+      kind: "clamped";
+      op: string;
+      parameter: string;
+      requested: number;
+      clamped: number;
+      bound: "min" | "max";
+    }
+  /** The proposal named an operator that is not in the registry. */
+  | { kind: "unknown_operator"; op: string; message: string }
+  /** The proposal set a parameter the named operator does not define. */
+  | { kind: "unknown_parameter"; op: string; parameter: string; message: string }
+  /**
+   * The proposal targeted a real operator that this world's physics rules out.
+   *
+   * Not an error: a composer proposing dunes for a planet that turns out to be airless is
+   * behaving reasonably, and the gate is what makes the proposal harmless. Worth recording
+   * because a composer that does it constantly is being given bad context.
+   */
+  | { kind: "proposal_for_inadmissible_operator"; op: string; message: string };
 
 export interface CompiledTerrainProgram {
   version: string;

@@ -12,7 +12,7 @@ import {
   fingerprintDistance,
   listOperators,
   operatorIds,
-  validateProposal,
+  unknownOperatorIds,
 } from "./index.js";
 
 const compile = (context: Parameters<typeof compileTerrainProgram>[0]["context"], seed = "s") =>
@@ -105,7 +105,9 @@ describe("the compiler binds proposals — prompts are not a safety mechanism", 
     });
     const op = program.operators.find((o) => o.op === "long_wavelength_isostasy");
     expect(op?.params.reliefAmplitudeM).toBeLessThanOrEqual(20_000);
-    expect(program.warnings.some((w) => w.parameter === "reliefAmplitudeM")).toBe(true);
+    expect(
+      program.warnings.some((w) => w.kind === "clamped" && w.parameter === "reliefAmplitudeM"),
+    ).toBe(true);
   });
 
   it("cannot enable an operator the physics rejected", () => {
@@ -133,8 +135,8 @@ describe("the compiler binds proposals — prompts are not a safety mechanism", 
 
   it("flags a proposal naming an operator that does not exist", () => {
     // Clamping means a model overreached; an unknown id means it invented a process.
-    expect(validateProposal({ crystal_spires: { height: 5 } })).toEqual(["crystal_spires"]);
-    expect(validateProposal({ aeolian_transport: {} })).toEqual([]);
+    expect(unknownOperatorIds({ crystal_spires: { height: 5 } })).toEqual(["crystal_spires"]);
+    expect(unknownOperatorIds({ aeolian_transport: {} })).toEqual([]);
   });
 });
 
