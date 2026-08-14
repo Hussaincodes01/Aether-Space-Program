@@ -221,6 +221,22 @@ function ingest(
     ["stellarDistance", "stellar_distance", star.distance],
   ];
 
+  /**
+   * Surface pressure, ingested outside the mission gate.
+   *
+   * No mission in the registry constrains an exoplanet's surface pressure, because none
+   * can: it has never been measured for any planet outside the Solar System, and the
+   * catalog only carries it for bodies visited in situ. Gating it would therefore be
+   * theatre -- it would always be withheld, for a reason unrelated to the selection.
+   *
+   * Ungated is also the honest choice in the other direction: Earth's 1013 hPa was measured
+   * by standing there with a barometer, and no orbital mission selection makes that more or
+   * less true.
+   */
+  if (planet.surfacePressure && planet.surfacePressure.value !== null) {
+    science.surface_pressure = toScientificQuantity(planet.surfacePressure);
+  }
+
   for (const [gate, field, catalogValue] of fields) {
     if (catalogValue === undefined) {
       unknown[field] = "Not present in the catalog entry.";
@@ -393,7 +409,7 @@ function fillInference(
       "No radius measurement, and no mass from which to infer one under the mass-radius relation.";
   }
 
-  if (planet.surfacePressure === undefined || planet.surfacePressure.value === null) {
+  if (science.surface_pressure === undefined) {
     unknown.surface_pressure =
       "No surface pressure has been measured for any exoplanet. Atmospheric thickness here is a hypothesis.";
   }

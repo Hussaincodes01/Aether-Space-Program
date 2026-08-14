@@ -18,11 +18,13 @@ import * as THREE from "three";
 import { envelopeWidth } from "@aether/missions";
 import { EARTH, secondsSinceJ2000 } from "@aether/solar-system";
 import {
+  buildDepthPartitions,
   cameraRelative,
   createCamera,
   depth as frameDepth,
   length as vecLength,
   maybeRebase,
+  type DepthPartition,
 } from "@aether/coordinates";
 import {
   TERRAIN_ENTER_RADII,
@@ -62,6 +64,8 @@ import {
 import { createModelInspector } from "./model-inspector.js";
 import { createErrorPanel, webglSupportMessage } from "./error-panel.js";
 import { buildPlanetModel, type PlanetModel } from "@aether/catalog";
+import { createDebugOverlay } from "./debug-overlay.js";
+import { desaturate, speculationStyle } from "./speculation.js";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
@@ -143,8 +147,47 @@ const camera = createCamera(earthEntry.frame, {
   z: 0,
 });
 
+/**
+ * Depth strategy.
+ *
+ * Two paths, and the default is the one that has actually been looked at on a screen.
+ *
+ * `logarithmic` is a single pass with Three's logarithmic depth buffer. Three applies it
+ * per-vertex, which interpolates incorrectly across very large triangles, so it is a
+ * compromise rather than a solution -- but it is one pass, it is fast, and the scene it
+ * produces has been verified.
+ *
+ * `partitioned` renders the scene once per depth partition, far to near, clearing depth
+ * between passes so nearer partitions overwrite. This is what actually makes twenty orders
+ * of magnitude work: each pass gets its own near/far planes and therefore its own full
+ * depth range, instead of six orders of magnitude sharing one buffer. The cost is one full
+ * scene traversal per partition.
+ *
+ * It is opt-in via `?depth=partitioned` rather than default because six full passes is a
+ * real performance change and shipping it as the default without having watched the frame
+ * time would be trading a verified path for an unverified one. The code is here, tested,
+ * and one query parameter away.
+ */
+const depthStrategy =
+  new URLSearchParams(window.location.search).get("depth") === "partitioned"
+    ? "partitioned"
+    : "logarithmic";
+
+/**
+ * Four partitions rather than the module default of six.
+ *
+ * The near end starts at 0.1 m because that is the closest anything is drawn, and the far
+ * end at 1e27 m to match the single-pass far plane, so switching strategies cannot change
+ * what is visible -- only how precisely it is depth-sorted.
+ */
+const depthPartitions: readonly DepthPartition[] =
+  depthStrategy === "partitioned" ? buildDepthPartitions(0.1, 1e27, 4) : [];
+
 const controls = createControls(canvas);
 renderWatermark();
+
+const debugOverlay = createDebugOverlay();
+document.body.appendChild(debugOverlay.element);
 
 // Point at Earth. Without this the camera starts at its default heading, which puts the
 // planet ~90 degrees off-axis and outside a 60 degree field of view — you spawn in orbit
@@ -264,14 +307,21 @@ let activeSystem: ExoSystem | null = null;
 function applyEvidence(): void {
   const systemSpeculation = activeSystem?.speculation ?? 0;
   const combined = Math.max(currentEnvelopeWidth, systemSpeculation);
-  const neutral = new THREE.Color(0.55, 0.54, 0.53);
+
+  // The modelled planet, where there is one, is the authority: its style already carries
+  // the uncertainty floor, so the rendering cannot accidentally drop below it.
+  const style = currentModel ? speculationStyle(currentModel) : null;
 
   for (const body of activeSystem?.planets ?? []) {
     const material = body.mesh.material as THREE.MeshStandardMaterial;
-    const uncertainty = Math.max(combined, body.speculation);
+    const uncertainty = Math.max(combined, body.speculation, style?.speculation ?? 0);
     // Desaturate toward neutral grey as certainty drops. A confident colour would be a
     // claim the data cannot support.
-    material.color.lerp(neutral, Math.min(0.85, uncertainty));
+    const faded = desaturate(
+      { r: material.color.r, g: material.color.g, b: material.color.b },
+      Math.min(0.85, uncertainty),
+    );
+    material.color.setRGB(faded.r, faded.g, faded.b);
   }
 }
 
@@ -434,6 +484,11 @@ window.addEventListener("keydown", (event) => {
     case "KeyC":
       togglePanel(panels.catalog);
       break;
+    case "KeyG":
+      // The precision readout. Named for "geometry", and kept off by default because it is
+      // a diagnostic rather than part of the product.
+      debugOverlay.toggle();
+      break;
     case "KeyP":
       // The model inspector, as distinct from I, which inspects whatever the camera is
       // nearest in the live scene.
@@ -554,6 +609,35 @@ function resize(): void {
 }
 window.addEventListener("resize", resize);
 
+/**
+ * Draw the scene under the active depth strategy.
+ *
+ * The partitioned path relies on `autoClear = false`: colour is cleared once, then each
+ * pass clears only depth. Far to near, so a nearer partition's geometry always wins the
+ * depth test against a farther one it overlaps.
+ */
+function renderScene(): void {
+  if (depthStrategy === "logarithmic") {
+    renderer.render(scene.three, threeCamera);
+    return;
+  }
+
+  renderer.autoClear = false;
+  renderer.clear(true, true, true);
+
+  for (let i = depthPartitions.length - 1; i >= 0; i--) {
+    const partition = depthPartitions[i]!;
+    threeCamera.near = partition.nearM;
+    threeCamera.far = partition.farM;
+    threeCamera.updateProjectionMatrix();
+    renderer.clearDepth();
+    renderer.render(scene.three, threeCamera);
+  }
+}
+
+/** Largest camera-relative offset handed to Three.js this frame, for the debug overlay. */
+let maxRelativeM = 0;
+
 function frame(now: number): void {
   const dt = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
@@ -570,6 +654,7 @@ function frame(now: number): void {
 
   // 2. Resolve every body relative to the camera, in f64, and record surface distances.
   distances.clear();
+  maxRelativeM = 0;
   for (const entry of scene.bodies.values()) {
     const rel = cameraRelative(camera, entry.frame);
     entry.mesh.position.set(rel.x, rel.y, rel.z);
@@ -594,7 +679,9 @@ function frame(now: number): void {
       }
     }
 
-    distances.set(entry.data.id, Math.hypot(rel.x, rel.y, rel.z));
+    const distance = Math.hypot(rel.x, rel.y, rel.z);
+    distances.set(entry.data.id, distance);
+    if (distance > maxRelativeM) maxRelativeM = distance;
   }
 
   // Exoplanet bodies, resolved camera-relative exactly like Solar System ones.
@@ -702,7 +789,7 @@ function frame(now: number): void {
     atmosphere.setSunDirection(new THREE.Vector3().subVectors(sunRel, host.mesh.position));
   }
 
-  renderer.render(scene.three, threeCamera);
+  renderScene();
 
   renderHud({
     frameId: camera.frame.id,
@@ -737,6 +824,18 @@ function frame(now: number): void {
     starsComplete: starfield.complete,
     simulationDate: new Date(Date.UTC(2000, 0, 1, 12) + scene.timeS * 1000),
     timeScale: scene.timeScale,
+  });
+
+  debugOverlay.update({
+    frameId: camera.frame.id,
+    frameDepth: frameDepth(camera.frame),
+    localMagnitudeM: vecLength(camera.position),
+    maxRelativeM,
+    altitudeM,
+    rebasedThisFrame: rebased,
+    depthStrategy,
+    partition: depthPartitions.length ? depthPartitions.length - 1 : null,
+    fps: smoothedFps,
   });
 
   requestAnimationFrame(frame);

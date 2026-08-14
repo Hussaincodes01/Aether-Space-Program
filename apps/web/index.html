@@ -748,6 +748,30 @@
         line-height: 1;
       }
 
+      /* -- Precision debug overlay (G) --
+         A diagnostic, not part of the product. Bottom-left, above the help line. */
+      #debug {
+        position: fixed;
+        bottom: 96px;
+        left: 16px;
+        z-index: 22;
+        min-width: 280px;
+        padding: 12px 16px;
+        background: rgba(6, 10, 20, 0.9);
+        border: 1px solid rgba(120, 170, 255, 0.28);
+        border-radius: 8px;
+        backdrop-filter: blur(8px);
+        pointer-events: none;
+      }
+      #debug h1 {
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #6f8ab5;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
       /* -- Mission selector -- */
       /* Above the overlay (z-index 10) so the selector stays usable when the mouse is
          released with Escape, rather than being greyed out and unclickable. */
@@ -886,7 +910,7 @@
       <b>Shift</b> boost &nbsp; <b>Space</b> brake &nbsp; <b>Wheel</b> throttle &nbsp;
       <b>Esc</b> release mouse &nbsp; <b>Home</b> Solar System &nbsp; <b>I</b> provenance &nbsp;
       <b>U</b> hide all panels &nbsp; <b>B</b> bodies &nbsp; <b>C</b> catalog &nbsp;
-      <b>P</b> provenance &nbsp; <b>K</b> map &nbsp; <b>M</b> missions
+      <b>P</b> provenance &nbsp; <b>K</b> map &nbsp; <b>G</b> precision &nbsp; <b>M</b> missions
       <p>
         Scroll to set throttle — it is the control, and the ceiling rises as you climb away from
         a surface, so keep scrolling up as you leave. Press <b>U</b> to clear the panels and
