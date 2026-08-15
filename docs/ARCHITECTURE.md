@@ -1,0 +1,369 @@
+# Aether — Architecture and Rebuild Plan
+
+**Status:** planning document. Supersedes ad-hoc phase briefs.
+**Ground truth date:** 2026-08-15, commit `67a2a36`.
+
+---
+
+## 1. What this system is
+
+Aether is a **client-only scientific renderer**. It loads static astronomical catalogues,
+derives physics from them deterministically, generates surface hypotheses for worlds nobody
+has resolved, and draws the result at true scale — while labelling every value with how it
+was obtained.
+
+There is no server, no database, no user accounts, and no network calls at runtime. That is
+a deliberate architectural position, not an unfinished state, and it is why most of the
+standard production checklist (auth, RLS, rate limiting, connection pooling) does not apply
+here. The threats this system actually faces are _epistemic_, not operational: the failure
+mode is a confident-looking planet that quietly invented its own data.
+
+**The one-sentence promise:**
+
+> Orbital scale, distances, units, stellar colours and physics-derived quantities are
+> accurate. Generated terrain and atmospheres are labelled hypotheses and never presented as
+> measurement.
+
+Everything below exists to make that sentence enforceable by a machine rather than by
+discipline.
+
+---
+
+## 2. What "accurate" means — the accuracy budget
+
+"Accurate" is not one property. It is six, with genuinely different achievable errors. A
+plan that does not separate them will overclaim on the weak ones and underclaim on the
+strong ones.
+
+| #   | Quantity                      | Source of truth              | Achievable error                      | Current state                                       | Verified by          |
+| --- | ----------------------------- | ---------------------------- | ------------------------------------- | --------------------------------------------------- | -------------------- |
+| A1  | Solar System body positions   | JPL elements, J2000          | ~10⁻⁶ rel. over 1800–2050             | Met — 19 satellite periods asserted to 5 s.f.       | `satellites.test.ts` |
+| A2  | Stellar positions & distances | HYG v4.4 (Hipparcos/Gliese)  | Parallax-limited; ~10% beyond 300 pc  | Met                                                 | `stars.test.ts`      |
+| A3  | Exoplanet orbital elements    | NASA Exoplanet Archive       | Publication-limited                   | Met where measured; prior-filled otherwise, flagged | `exoplanets.test.ts` |
+| A4  | Deep-sky distances            | OpenNGC + redshift           | Hubble-tension-limited (67.4 vs 73.0) | Met — both values exposed, not averaged             | `deepsky.test.ts`    |
+| A5  | Derived physics               | Allowlisted formulas         | Input-uncertainty-limited             | Met — confidence = min over inputs                  | `physics.test.ts`    |
+| A6  | **Surface geography**         | **Nothing. Never resolved.** | **Unbounded**                         | **Hypothesis only, floor never removed**            | `terrain.test.ts`    |
+
+**A6 is the whole design problem.** Rows A1–A5 are engineering; A6 is an epistemic
+commitment. The uncertainty floor for an unresolved exoplanet surface is 0.15 and must never
+reach zero regardless of how many missions are selected. Any change that lets it reach zero
+is a defect of the highest severity in this codebase, whatever it does for the visuals.
+
+### Numerical accuracy: the f64/f32 boundary
+
+The renderer is f32. The universe is 10²⁷ m across. A single-precision float has ~7
+significant decimal digits, so f32 world coordinates lose metre resolution at ~10⁷ m — about
+Earth's radius. Naively uploading absolute positions produces visible jitter from low orbit
+outward.
+
+The contract, which is the load-bearing invariant of the entire client:
+
+1. Advance f64 orbital positions.
+2. Advance the f64 camera, rebase across frames with hysteresis.
+3. Resolve each body's position **relative to the camera**, in f64.
+4. Narrow _that offset only_ to f32.
+5. Three.js's camera sits at the origin and only ever rotates.
+
+Assertion: local coordinate magnitude stays bounded near surfaces; rebasing never moves a
+body in world space. Both are tested in `precision.test.ts`, and the magnitude is shown live
+in the precision overlay (`G`).
+
+---
+
+## 3. Stack
+
+The system-architecture default stack (Next.js + Supabase + Postgres + Clerk) is the right
+answer for a CRUD SaaS and the wrong answer here. Recording _why_ so it is not revisited:
+
+| Layer        | Choice                                  | Why, and what was rejected                                                                                           |
+| ------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Renderer     | **Three.js (WebGL2)**                   | Mandated by PRD v1.2. Babylon.js was the earlier choice; Three has the larger ecosystem for custom depth handling.   |
+| Language     | **TypeScript, strict**                  | The unit brands are compile-time only. They are the primary defence against `gravity(massInEarths, radiusInMetres)`. |
+| Build        | **Vite + tsc**                          | Workers, and near-instant HMR at this source size.                                                                   |
+| Packages     | **pnpm workspace, 11 packages + 1 app** | Boundaries are enforced by lint, not convention.                                                                     |
+| Validation   | **Zod**                                 | Runtime shape for anything crossing the LLM/ingestion boundary.                                                      |
+| Tests        | **Vitest (+ jsdom for the app)**        | Three builds its object graph on the CPU, so scene assembly is testable without a GPU.                               |
+| Data         | **Static binary + JSON, bundled**       | 3.5 MB total. No backend to run, no API to rate-limit, no key to leak.                                               |
+| **Backend**  | **None**                                | Deliberate. Revisit only for user-generated content (§9).                                                            |
+| **Database** | **None**                                | Catalogues are read-only and version-pinned. A database would add ops burden and buy nothing.                        |
+| **Auth**     | **None**                                | No user data exists to protect.                                                                                      |
+| CI           | GitHub Actions                          | lint → format → typecheck → test → build → build client.                                                             |
+
+---
+
+## 4. Module architecture
+
+Dependencies point strictly downward. **Verified acyclic** at the ground-truth commit.
+
+```mermaid
+graph TD
+    web["apps/web · 5,479 LOC<br/>Three.js, DOM, workers"]
+
+    catalog["catalog · 1,901<br/>ingestion → PlanetModel"]
+    solar["solar-system · 1,469<br/>Kepler, 36 bodies"]
+    terrain["terrain · 1,710<br/>gated operator compiler"]
+    missions["missions · 1,077<br/>14 missions, evidence"]
+    schema["schema · 1,484<br/>3-layer contract, resolver"]
+    physics["physics · 880<br/>formula registry"]
+    coords["coordinates · 546<br/>f64 frames, floating origin"]
+    stars["stars · 270"]
+    exo["exoplanets · 616"]
+    deep["deepsky · 518"]
+    units["units · 256<br/>branded SI, constants"]
+
+    web --> catalog & solar & terrain & missions & schema & physics & coords & stars & exo & deep
+    catalog --> missions & physics & schema & terrain
+    solar --> terrain
+    terrain --> physics & schema
+    stars --> physics
+    catalog & solar & terrain & missions & schema & physics & coords & stars & exo & deep --> units
+
+    classDef app fill:#1a3a5c,stroke:#5ea8ff,color:#eaf3ff
+    classDef sci fill:#12233d,stroke:#4a7cb8,color:#cfe3ff
+    classDef base fill:#0d1826,stroke:#3a5f8a,color:#9fc4f5
+    class web app
+    class catalog,solar,terrain,missions,schema,physics,coords,stars,exo,deep sci
+    class units base
+```
+
+### The rules that make this hold
+
+1. **No science package imports a renderer.** Enforced by `no-restricted-imports` in
+   `eslint.config.js`, not by review. Three.js in `packages/physics` would compile, pass
+   every test, and silently destroy the property that lets the science layers be tested
+   without a GPU.
+2. **`units` depends on nothing.** It is the root, and it stays there.
+3. **No cycles.** `solar-system → terrain` is the only non-obvious edge (the Solar System is
+   the terrain generator's validation path, not the other way round).
+4. **The app is the only package that knows about the DOM.**
+
+---
+
+## 5. Data model
+
+Not SQL. The type contract _is_ the data model, and it is the thing that has to be right.
+
+### The atom
+
+```ts
+interface ScientificQuantity {
+  valueSI: number | null; // null is first-class and must survive to the UI
+  unit: string; // enforced dimensionally, not decorative
+  uncertainty?: { minus: number; plus: number; distribution?: string };
+  method: "measured" | "derived" | "retrieved" | "prior";
+  sourceId: string; // must resolve in the source registry
+  retrievedAt: string;
+  confidence?: number; // 0..1
+}
+```
+
+`valueSI: null` means _genuinely unknown_ and must never be silently replaced by a population
+default. That substitution is what `InferenceSpec` is for, and the distinction is the
+difference between "we do not know" and "we guessed" — which is exactly what a user needs to
+be able to see.
+
+### The three layers, and their permissions
+
+| Layer           | Written by                        | Affects science?                 |
+| --------------- | --------------------------------- | -------------------------------- |
+| `ScienceSpec`   | ingestion + allowlisted physics   | **yes**                          |
+| `InferenceSpec` | versioned models + prior resolver | yes, _with uncertainty_          |
+| `VisualSpec`    | composer / LLM / texture pipeline | **no — structurally impossible** |
+
+`VisualValue.affectsPhysics` is typed `z.literal(false)`. It cannot be constructed `true`.
+This is the containment guarantee, and it is a type-level fact rather than a convention.
+
+### Composite
+
+```
+PlanetModel = { science, inference, visual }
+   ├─ derived physics      (density, gravity, escape velocity, T_eq, insolation, scale height)
+   ├─ evidence profile     (which missions constrain which parameters)
+   ├─ inference envelope   (width; floor 0.15, never 0)
+   ├─ terrain program      (gated operators + rejections with reasons)
+   └─ provenance graph     (every value → method, source, formula, confidence)
+```
+
+### The resolver precedence chain
+
+Strictly ordered; first strategy that can answer, answers:
+
+```
+measurement → derivation → calibrated posterior → population prior → visual placeholder
+                                                                   → UNRESOLVED (explicit)
+```
+
+Every candidate is checked before return: dimensional compatibility, physical domain,
+finiteness. Rejections are **collected and reported**, never swallowed — "we had a value and
+discarded it because it was in the wrong unit" is a bug report, and a silent `unresolved`
+would hide it.
+
+---
+
+## 6. Key design decisions
+
+| Decision                                  | Alternative                | Why                                                                                                                                  |
+| ----------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| NaN, not 0, as "unmeasured"               | `0` or `-1` sentinel       | `0` is a legal albedo, eccentricity and pressure. A sentinel that collides with a real value produces silent wrongness.              |
+| Confidence = **min** over inputs          | mean                       | Averaging lets one well-measured input launder a badly-constrained one. A derivation cannot be more certain than its weakest input.  |
+| Mission quality = **best**, never summed  | additive coverage          | Summing lets a user manufacture confidence by ticking boxes. Two mediocre transit surveys are not one good one.                      |
+| Uncertainty floor 0.15, unreachable       | floor 0 with full evidence | No exoplanet surface has ever been resolved. A floor of 0 would be a lie the UI tells at exactly the moment the user trusts it most. |
+| Galaxies never get parallax               | trust the catalogue        | OpenNGC lists a 6 mas parallax for M31 (foreground star contamination) which puts Andromeda at 167 pc. 151 such rows rejected.       |
+| Real textures suppress procedural terrain | generate everywhere        | The Solar System is the only ground truth. Inventing geography on Mars discards the comparison that makes the generator falsifiable. |
+| `G(M☉ + m)`, not `GM☉`                    | solar mass only            | Jupiter is 1/1047 M☉; omitting it puts its period out by two days.                                                                   |
+| Hubble tension exposed, not averaged      | pick one H₀                | 67.4 and 73.0 disagree at 5σ. Averaging invents a number no one measured.                                                            |
+
+---
+
+## 7. Honest defect and gap register
+
+Carried forward deliberately. A plan that omits these is not a plan.
+
+| #   | Gap                                                                                                                                                                                                        | Severity                                          | Evidence                                                      |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
+| G1  | **`depth.ts` has zero consumers.** Cascaded frusta / reversed-Z is written and exported; the client still runs Three's per-vertex log depth buffer, which interpolates incorrectly across large triangles. | **High** — this is the stated P0 in `main.ts:100` | `grep` finds it referenced only by its own package `index.ts` |
+| G2  | **No LLM composer exists.** The containment schema, forbidden-field scan and boundary tests are all built and tested; nothing calls a model. The PRD's central premise is unimplemented.                   | **High**                                          | `composeTerrain`, `llmCompose` → 0 files                      |
+| G3  | **Motion is frozen** (`FROZEN = true`). Positions are real; nothing rotates or revolves.                                                                                                                   | Medium — deliberate, user-requested               | `main.ts`                                                     |
+| G4  | **No browser-level verification.** Playwright is not installed; all UI evidence is jsdom assertions plus a clean build.                                                                                    | Medium                                            | no `playwright` in any `package.json`                         |
+| G5  | **Terrain is never scored against ground truth.** Tests assert _which operators_ fire on Mars, not whether the output resembles Mars. The calibration harness was planned and never built.                 | Medium                                            | no scoring code in `packages/terrain`                         |
+| G6  | Catalogue seed covers 3 systems (Sol, Proxima Centauri, TRAPPIST-1); the other 4,719 come from the binary catalogue without the full typed-provenance path.                                                | Low                                               | `packages/catalog/src/seed/`                                  |
+
+---
+
+## 8. The rebuild plan
+
+Five stages. Each has a falsifiable exit criterion — not "looks better", but a check that
+can fail. Stages are ordered by _risk retired per unit of work_, so the two High-severity
+gaps come first.
+
+### Stage 0 — Freeze the contract (prerequisite, ~1 day)
+
+No behaviour change. Establishes what must not regress.
+
+- Snapshot the accuracy budget (§2) as executable tests, one per row A1–A6.
+- Add a `pnpm check:invariants` gate: dependency graph acyclic, no renderer import in
+  science packages, uncertainty floor unreachable, `affectsPhysics` never `true`.
+- **Exit:** the gate fails if any invariant is deliberately broken in a scratch commit.
+  _Prove it by breaking each one on a throwaway branch and watching CI go red._
+
+### Stage 1 — Wire the real depth path (G1, ~3 days)
+
+The largest correctness gap in rendering.
+
+- Replace the log-depth buffer with the existing partitioned frusta + reversed-Z in
+  `depth.ts`. Render near/mid/far partitions, clearing depth between.
+- **Exit:** a test scene with co-planar geometry at 10³ m, 10⁹ m and 10¹⁸ m shows no z-fighting
+  in a captured frame; depth precision at 2 m altitude is better than 1 mm.
+- **Risk:** reversed-Z needs `EXT_clip_control` or an inverted projection matrix; Three's
+  material system fights custom depth. Fallback is documented partitions without reversed-Z,
+  which still beats log depth.
+
+### Stage 2 — The composer, contained (G2, ~5 days)
+
+The PRD's central premise, built inside the containment that already exists.
+
+- `packages/composer`: takes `PlanetModel`, emits an `OperatorProposal` — nothing else.
+- Runs behind the existing Zod schema + forbidden-field scan + source-registry validation.
+- Deterministic: same planet + same evidence profile + same seed ⇒ byte-identical proposal.
+  Cache keyed on that triple; the model is never called twice for one input.
+- **Exit:** an adversarial suite of ≥20 hostile proposals (invented operators, out-of-range
+  parameters, forbidden science fields, unit mismatches, prompt injection in a name field)
+  all rejected with recorded reasons, and zero reach `ScienceSpec`.
+- **Non-negotiable:** the composer may only widen or select within physics-admissible ranges.
+  It cannot enable a gated-off operator. This is already true of the compiler; Stage 2 must
+  not add a bypass.
+
+### Stage 3 — Calibration harness (G5, ~4 days)
+
+Makes A6 measurable rather than merely labelled.
+
+- Score generated terrain against real Mars/Moon/Earth hypsometry: elevation histogram,
+  crater size-frequency distribution, drainage density.
+- Fit the operator knobs to minimise divergence on those three, then hold out Titan and
+  Mercury as a validation set.
+- **Exit:** published scores per body, with the held-out set reported separately. A score
+  that is worse than the current default is reported, not hidden.
+- **This stage can fail honestly.** If the generator cannot match Mars, that is the finding,
+  and it belongs in the README rather than being tuned away.
+
+### Stage 4 — Browser truth (G4, ~2 days)
+
+- Playwright + WebGL (SwiftShader) in CI. Screenshot the three states: system view, planet
+  approach, provenance panel.
+- Assert the precision overlay's local-coordinate magnitude stays under 10¹² m across a
+  scripted flight from Earth orbit to TRAPPIST-1e.
+- **Exit:** CI fails on a blank canvas. This has bitten twice — a 1e15 far plane clipped
+  every star, and a camera pointed 90° away from Earth — and both passed every unit test.
+
+### Stage 5 — Motion (G3, ~2 days, gated on user intent)
+
+- Unfreeze rotation and revolution behind a UI toggle, defaulting to frozen.
+- **Exit:** with motion on, orbital periods measured from the render loop match §2 A1 to the
+  same 5 s.f.
+
+**Not scheduled, and why:** multiplayer, accounts, a backend, mobile. None of them serve the
+promise in §1, and each would add an operational surface this system currently does not have.
+
+---
+
+## 9. Scaling path
+
+Scale here is **data volume and frame budget**, not users. There is no server to scale.
+
+| Stage | Trigger                           | Action                                                                                               |
+| ----- | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Now   | 3.5 MB catalogues, 485 tests      | Bundled static; progressive tier loading for stars                                                   |
+| Next  | Full Gaia DR3 (1.8 B sources)     | Octree tiles fetched on demand; catalogue becomes a CDN artifact, still no database                  |
+| Later | User-generated hypotheses         | _This_ is what justifies a backend. Postgres + auth, and only then does the standard checklist apply |
+| Frame | >5 ms/frame in the terrain worker | Already worker-isolated; add LOD budget before adding threads                                        |
+
+---
+
+## 10. Production checklist, tailored
+
+Struck-through items are not applicable to a client-only static renderer and are recorded so
+they are not re-raised.
+
+**Scientific integrity — the real checklist**
+
+- [x] Every quantity carries unit, method, source, confidence
+- [x] Unit and domain enforced at the resolver boundary
+- [x] `affectsPhysics: false` unconstructible as `true`
+- [x] Uncertainty floor unreachable
+- [x] Mission quality best-not-sum
+- [x] Rejections reported, never swallowed
+- [ ] **Accuracy budget executable as tests** (Stage 0)
+- [ ] **Generated terrain scored against ground truth** (Stage 3)
+
+**Reliability**
+
+- [x] Typed error classes; user-facing error panel
+- [x] Graceful WebGL-unsupported message
+- [x] Deterministic seeds
+- [ ] Browser-level smoke test in CI (Stage 4)
+
+**Ops**
+
+- [x] CI: lint → format → typecheck → test → build
+- [x] Node floor enforced (`engine-strict`)
+- [x] Catalogue provenance + licences recorded per dataset
+- [ ] Version-pin catalogue snapshots with a checksum manifest
+
+**Not applicable:** ~~auth on protected routes~~ · ~~RLS~~ · ~~rate limiting~~ · ~~CORS~~ ·
+~~secrets management~~ · ~~DB migrations~~ · ~~backups~~ · ~~health endpoint~~ —
+no server, no database, no user data, no secrets.
+
+---
+
+## 11. Anti-patterns explicitly rejected
+
+- **Microservices / a backend for an MVP.** There is no server. Adding one to store
+  read-only catalogues would be pure operational cost.
+- **Premature optimisation.** The terrain worker is not threaded further until a measurement
+  says it must be.
+- **Building auth from scratch** — or at all, until §9 Stage 3 gives it a reason to exist.
+- **Tuning a metric until it passes.** Stage 3 reports the score it gets. The terrain
+  diversity threshold was already calibrated to the measured 0.10 rather than an invented
+  0.15, and that precedent holds.
+- **Trusting a catalogue field because it is in a catalogue.** M31 at 167 pc passed every
+  schema check.
