@@ -367,3 +367,169 @@ no server, no database, no user data, no secrets.
   0.15, and that precedent holds.
 - **Trusting a catalogue field because it is in a catalogue.** M31 at 167 pc passed every
   schema check.
+
+---
+
+## 12. Direction change — six new ideas
+
+Added 2026-08-15. These reshape stages 2–5 of §8. Recorded with their real costs and the two
+places they conflict, because a plan that lists only the appealing half of a tradeoff is a
+wish list.
+
+### 12.0 The tension, stated first
+
+Voxels and Minecraft pull toward **game**. The accuracy budget pulls toward **instrument**.
+Both are legitimate products; they are not automatically the same product, and the conflict is
+not resolved by wanting both.
+
+The resolution this plan adopts:
+
+> **The authoritative surface is the continuous operator field. Voxels are a view of it, not
+> the model of it.**
+
+That keeps everything in §2 intact — the field stays deterministic, testable and falsifiable
+against Mars — while a voxel renderer becomes a presentation layer that can be as blocky as it
+likes. Invert this and make voxels authoritative, and A6 stops being measurable, because there
+is no longer a continuous field to score against real hypsometry.
+
+One hard rule follows, and it is not negotiable:
+
+> **A voxel region the user has edited is no longer a hypothesis about that planet.** The
+> moment a block is placed, provenance for that region is void and has to be labelled void.
+
+### 12.1 Planet = perfect solid sphere
+
+**Accept — and it fixes a real defect.** The current placeholder is `SphereGeometry(1, 96, 48)`,
+a 3.75°-per-facet polygon whose limb is visibly straight-edged from low orbit. But "perfect
+sphere" has to mean the **datum is exact**, not that the visible surface is smooth:
+
+- The sphere is the reference surface: collision floor, altitude zero, atmosphere base.
+- Relief is a labelled displacement on top of it. Real relief is tiny — Everest is **0.139%**
+  of Earth's radius — which is exactly why the renderer exaggerates it 25× and says so.
+- The silhouette should be analytic (ray–sphere), so the horizon stays exact at every zoom
+  instead of degrading into polygons as you descend.
+
+This also supplies the datum that voxelisation needs, so 12.1 is a prerequisite for 12.2.
+
+**Cost:** ~2 days. **Risk:** low.
+
+### 12.2 Voxel world
+
+**Accept as a close-range view mode. Reject as a storage format.** The arithmetic decides it:
+
+| Representation                    | Voxels      | Storage at 1 B each |
+| --------------------------------- | ----------- | ------------------- |
+| Earth, 1 m voxels, one-deep shell | 5.10 × 10¹⁴ | **510 TB**          |
+| Earth, 4 m voxels, one-deep shell | 3.19 × 10¹³ | **32 TB**           |
+| Local region, 512 × 512 × 384     | 1.01 × 10⁸  | **101 MB**          |
+
+A whole-planet voxel grid is not storable at any voxel size worth having. The tractable form is
+the one Minecraft itself uses: **chunks are a pure function of position and seed, generated on
+demand and never stored.** Here that function is the existing terrain program, so the voxel
+field and the mesh surface become two samplings of one field and cannot disagree.
+
+- `packages/voxel`: `sampleVoxel(planetSeed, terrainProgram, x, y, z) → material`. Pure,
+  deterministic, no stored state, no renderer import.
+- Meshing (greedy or surface-nets) in the existing worker pool.
+- Edits stored as a **sparse delta** against the generated field, not as a world. This is the
+  first feature in the project that genuinely justifies a backend (§9).
+
+**Cost:** ~10–14 days, the largest item on this plan. **Risk:** high — chunk streaming, LOD
+across a curved datum, and the delta model are each non-trivial on their own.
+
+### 12.3 Terrain diffusion + LLM composer
+
+**Accept, reusing the containment already built — and precompute before in-browser inference.**
+
+The composer from §8 Stage 2 stands. Diffusion becomes a second generator behind the _same_
+gate:
+
+- The model emits a **heightfield residual conditioned on physical parameters**, clamped by the
+  operator gates that already exist. It cannot enable a gated-off process, and it writes to
+  `VisualSpec`/`InferenceSpec` — never `ScienceSpec`.
+- Determinism needs pinned weights, a fixed seed and a recorded model version. Every
+  `Distribution` in the schema already carries `modelId` and `seed`, so the provenance slot is
+  there.
+- **Precompute offline first.** Ship residual tiles for the catalogue: deterministic by
+  construction, zero runtime cost, cacheable. In-browser ONNX/WebGPU inference is a later
+  optimisation, not the way in.
+
+**Send me the paper.** I will not design against a citation I cannot check — diffusion-based
+terrain synthesis is an active area with several distinct approaches, and which one you mean
+changes the conditioning design.
+
+**Cost:** ~6 days for the precompute path on top of Stage 2. **Risk:** medium.
+
+### 12.4 Parameterized generation
+
+**Accept — the cheapest win here, and it is already half-built.** The operator system carries
+typed `min`/`max`/`default` per parameter with gate clamping, and `Assumption` in
+`packages/physics` already has a `userAdjustable` flag that nothing reads yet.
+
+Exposing those as sliders gives the assumption sandbox the PRD describes: change an assumed
+Bond albedo, watch equilibrium temperature and the surface re-derive, and watch confidence drop
+because an assumed input caps it at 0.5. The machinery exists; only the UI is missing.
+
+**Cost:** ~3 days. **Risk:** low. **Do this first** — it is the shortest path from the current
+build to something that demonstrates the entire thesis in one interaction.
+
+### 12.5 ML spectroscopy
+
+**Accept, and scope it honestly.** This is the most scientifically grounded of the six, and the
+schema was shaped for it: `method: "retrieved"`, `oodFlag`, `modelId` and quantile storage all
+exist and are already respected by the resolver's precedence chain.
+
+What is achievable, in order of honesty:
+
+1. **Ingest published retrieval posteriors** where they exist. Real, citable, no model to train.
+2. **A forward-model surrogate** for planets without published retrievals, trained on synthetic
+   transmission spectra, with OOD detection gating it out of the calibrated path.
+
+The scope limit has to be stated plainly: measured transmission spectra exist for **of order
+100 planets, not 6,309**. This will not fill the catalogue, and any UI implying it does is the
+exact overclaim §2 exists to prevent.
+
+**Cost:** ~5 days for (1); considerably more for (2). **Risk:** low for (1).
+
+### 12.6 Minecraft mods
+
+**Accept as a one-way export. Reject as a dependency.** The licence decides the architecture:
+
+- Minecraft is proprietary (Mojang/Microsoft). **No Minecraft assets, textures, code or
+  identifiers enter this repo**, and the EULA constrains commercial distribution of mods.
+- What is clean: Aether **writes** an Anvil region or datapack using its own writer against the
+  community-documented format. The user opens it in their own licensed copy. No Minecraft code
+  is linked, shipped, or needed to build.
+- A Fabric/Forge mod, if wanted, is a **separate Java repository** consuming that export. It
+  cannot share this TypeScript codebase.
+
+The provenance problem this creates is the interesting part. A world folder carries no badges,
+so the moment terrain leaves Aether every label is gone. The export therefore has to carry its
+own: a manifest JSON, a written book in the spawn chest, and signs at spawn naming the planet,
+the evidence profile, the seed, and the fact that the geography is a generated hypothesis rather
+than an observation.
+
+**Cost:** ~4 days for the writer. **Risk:** low technically, **medium on licence** — worth
+reading the EULA before any distribution.
+
+### 12.7 Revised order
+
+Re-sequenced by value per day, with the two High-severity gaps from §7 kept near the front:
+
+| Order | Item                                            | Days | Why here                                                     |
+| ----- | ----------------------------------------------- | ---- | ------------------------------------------------------------ |
+| 1     | §8 Stage 0 — freeze the contract                | 1    | Nothing below is safe without it                             |
+| 2     | **12.4 parameterized sliders**                  | 3    | Half-built; demonstrates the whole thesis in one interaction |
+| 3     | **12.1 perfect sphere datum**                   | 2    | Fixes the faceted limb; prerequisite for voxels              |
+| 4     | §8 Stage 1 — real depth path (G1)               | 3    | Highest open correctness gap                                 |
+| 5     | §8 Stage 4 — browser truth (G4)                 | 2    | Moved up four places — see below                             |
+| 6     | §8 Stage 2 + **12.3** composer & diffusion (G2) | 11   | The PRD's central premise                                    |
+| 7     | §8 Stage 3 — calibration (G5)                   | 4    | Makes A6 measurable; allowed to fail honestly                |
+| 8     | **12.5 spectroscopy, published posteriors**     | 5    | Real science, bounded scope                                  |
+| 9     | **12.2 voxel view mode**                        | 14   | Largest item; needs 12.1 and a stable field first            |
+| 10    | **12.6 Minecraft export**                       | 4    | Needs 12.2                                                   |
+
+Stage 4 moved from ninth to fifth deliberately. On 2026-08-15 the application opened on an unlit
+black sphere, with no collision anywhere and the inverse-square law written upside down — and
+**every one of those defects passed 485 unit tests and a clean build.** Browser verification is
+not polish. It is the only gate that catches the class of defect this project actually produces.
