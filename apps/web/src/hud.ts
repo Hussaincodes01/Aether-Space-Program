@@ -29,6 +29,8 @@ export function formatSpeed(metresPerSecond: number): string {
 }
 
 export interface HudData {
+  /** Body name while the camera is resting on its surface, else null. */
+  groundedOn?: string | null;
   frameId: string;
   frameDepth: number;
   altitudeM: number;
@@ -91,6 +93,9 @@ export function renderHud(data: HudData): void {
     row("frame", `${data.frameId} (depth ${data.frameDepth})`),
     row("local coords", formatDistance(local), localHealth),
     row("altitude", formatDistance(data.altitudeM)),
+    // Landing is worth stating outright: until the collision floor existed the camera
+    // passed straight through every world, so "standing on" is genuinely new information.
+    data.groundedOn ? row("standing on", data.groundedOn, "ok") : "",
     row("to Sun", formatDistance(data.distanceToStarM)),
     row("throttle", formatSpeed(data.throttle)),
     row(

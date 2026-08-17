@@ -93,6 +93,38 @@ const SURFACE_MAPS = new Set([
   "neptune",
 ]);
 
+/**
+ * Can you stand on this?
+ *
+ * The Sun has no surface to land on -- the photosphere is a plasma opacity boundary, not
+ * ground -- and neither do the four giants, whose "surface" is a 1-bar pressure level with
+ * tens of thousands of kilometres of increasingly dense fluid beneath it. Approaching either
+ * is fine; arriving is not, so the collision floor for these sits well above the nominal
+ * radius rather than on it.
+ */
+export function isLandable(body: SolarBody): boolean {
+  if (body.kind === "star") return false;
+  // Bulk density below ~1500 kg/m3 with no measured surface pressure floor means a fluid
+  // envelope all the way down. This is the same threshold the terrain gates use.
+  const density = body.massKg / ((4 / 3) * Math.PI * body.radiusM ** 3);
+  return density >= MIN_LANDABLE_DENSITY_KG_M3;
+}
+
+/** Matches the terrain package's solid-surface gate, so the two never disagree. */
+export const MIN_LANDABLE_DENSITY_KG_M3 = 1500;
+
+/**
+ * How close the camera may get to a body's centre, in metres.
+ *
+ * For a solid world this is the surface plus a two-metre eye height -- standing on it. For
+ * the Sun and the giants it is a standoff, because there is no "on".
+ */
+export function collisionRadiusM(body: SolarBody): number {
+  if (body.kind === "star") return body.radiusM * 1.35;
+  if (!isLandable(body)) return body.radiusM * 1.02;
+  return body.radiusM + 2;
+}
+
 export function hasSurfaceMap(bodyId: string): boolean {
   return SURFACE_MAPS.has(bodyId);
 }

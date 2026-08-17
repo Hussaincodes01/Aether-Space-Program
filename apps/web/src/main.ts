@@ -15,6 +15,7 @@
  */
 
 import * as THREE from "three";
+import { AU as AU_M } from "@aether/units";
 import { envelopeWidth } from "@aether/missions";
 import { EARTH, secondsSinceJ2000 } from "@aether/solar-system";
 import {
@@ -32,6 +33,8 @@ import {
   attachTerrain,
   bodyOrientation,
   buildSolarScene,
+  collisionRadiusM,
+  isLandable,
   nearestBody,
   releaseTerrain,
   hasSurfaceMap,
@@ -140,13 +143,65 @@ const threeCamera = new THREE.PerspectiveCamera(
 );
 threeCamera.position.set(0, 0, 0);
 
-// Begin in low Earth orbit, looking down. Home first.
+/**
+ * Where to sit so a body is actually lit.
+ *
+ * The camera used to spawn at a fixed `+x` offset in the target's frame. On 2026-08-15 that
+ * put it 128.8 degrees from Earth's subsolar point -- squarely on the night side -- so the
+ * application opened on an unlit black sphere against black space, and the planet read as
+ * missing rather than as dark. Every report of "the planets are not visible" traced here.
+ *
+ * The fix is to derive the standoff from the geometry instead of hardcoding it: sit on the
+ * sunward side, lifted slightly out of the ecliptic so the terminator is visible and the
+ * world reads as a sphere rather than a flat disc.
+ */
+function sunwardStandoff(
+  bodyId: string,
+  distanceM: number,
+): { x: number; y: number; z: number } {
+  const entry = scene.bodies.get(bodyId);
+  const sun = scene.bodies.get("sun");
+
+  // Heliocentric position of the body, walking up through any parent frames so a moon is
+  // placed relative to the Sun rather than to its planet.
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  for (let f = entry?.frame ?? null; f && f !== sun?.frame; f = f.parent) {
+    x += f.position.x;
+    y += f.position.y;
+    z += f.position.z;
+  }
+
+  const r = Math.hypot(x, y, z);
+  if (!Number.isFinite(r) || r === 0) {
+    // The Sun itself, or anything without a resolvable heliocentric position.
+    return { x: distanceM, y: distanceM * 0.3, z: 0 };
+  }
+
+  // Toward the Sun, plus a lift out of the orbital plane for a three-quarter view.
+  const sunward = { x: -x / r, y: -y / r, z: -z / r };
+  const lift = 0.32;
+  const nx = sunward.x;
+  const ny = sunward.y + lift;
+  const nz = sunward.z + lift * 0.6;
+  const n = Math.hypot(nx, ny, nz);
+
+  return { x: (nx / n) * distanceM, y: (ny / n) * distanceM, z: (nz / n) * distanceM };
+}
+
+/**
+ * Display gain on sunlight.
+ *
+ * Relative insolation between bodies stays physically correct; this only sets where the
+ * whole scale sits against the tone mapper. Purely a viewing choice, like an exposure dial.
+ */
+const SUN_LIGHT_GAIN = 3.6;
+
+// Begin in low Earth orbit on the daylit side. Home first.
 const earthEntry = scene.bodies.get("earth")!;
-const camera = createCamera(earthEntry.frame, {
-  x: EARTH.radiusM * 2.6,
-  y: EARTH.radiusM * 0.6,
-  z: 0,
-});
+const camera = createCamera(earthEntry.frame, { x: EARTH.radiusM * 2.6, y: 0, z: 0 });
+camera.position = sunwardStandoff("earth", EARTH.radiusM * 2.9);
 
 /**
  * Depth strategy.
@@ -293,6 +348,24 @@ leftDock.add({
 leftDock.add({ id: "bodies", title: "Solar System", hint: "B", element: bodyList.element });
 leftDock.add({ id: "starmap", title: "Interstellar map", hint: "K", element: starMap.element });
 
+/**
+ * Telemetry is a panel, not an overlay.
+ *
+ * It was fixed at top-centre, directly over whatever the camera was framing -- so the readout
+ * describing Earth was drawn on top of Earth. In the rail it cannot collide with anything,
+ * and it is toggleable like everything else.
+ */
+const hudElement = document.getElementById("hud");
+if (hudElement) {
+  rightDock.add({
+    id: "telemetry",
+    title: "Telemetry",
+    hint: "H",
+    element: hudElement,
+    startOpen: true,
+  });
+}
+
 rightDock.add({ id: "missions", title: "Missions", hint: "M", element: missionPanel.element });
 
 /**
@@ -314,13 +387,21 @@ function travelToBody(bodyId: string): void {
     starMap.setCurrent(null);
   }
 
-  const standoff = entry.data.radiusM * 3.2;
+  // Never inside the collision floor, and always on the lit side -- arriving at a black
+  // disc is indistinguishable from arriving at nothing.
+  const standoff = Math.max(entry.data.radiusM * 3.2, collisionRadiusM(entry.data) * 1.4);
   camera.frame = entry.frame;
-  camera.position = { x: standoff, y: standoff * 0.35, z: standoff * 0.2 };
+  camera.position = sunwardStandoff(bodyId, standoff);
   controls.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
 }
 
 bodyList.onTravel(travelToBody);
+
+/** Nearest-body altitude in radii, carried one frame for the orbit-line fade. */
+let lastAltitudeRadii = 1e9;
+
+/** Set to a body's name while the camera is resting on its surface. */
+let grounded: string | null = null;
 
 /** The exoplanet system the camera is currently inside, if any. */
 let activeSystem: ExoSystem | null = null;
@@ -385,7 +466,7 @@ function returnToSolarSystem(): void {
   activeSystem?.dispose();
   activeSystem = null;
   camera.frame = earthEntry.frame;
-  camera.position = { x: EARTH.radiusM * 2.6, y: EARTH.radiusM * 0.6, z: 0 };
+  camera.position = sunwardStandoff("earth", EARTH.radiusM * 2.9);
   controls.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
   starMap.setCurrent(null);
 }
@@ -450,7 +531,6 @@ function inspectNearest(): void {
  * keys toggle one at a time.
  */
 const panels = {
-  hud: document.getElementById("hud"),
   help: document.getElementById("help"),
 };
 
@@ -466,7 +546,6 @@ function toggleAllUi(): void {
   // without needing to remember the shortcut that got rid of them.
   leftDock.setRailCollapsed(uiHidden);
   rightDock.setRailCollapsed(uiHidden);
-  setPanel(panels.hud, !uiHidden);
   setPanel(panels.help, !uiHidden);
   if (uiHidden) {
     provenance.hide();
@@ -498,6 +577,9 @@ window.addEventListener("keydown", (event) => {
       break;
     case "KeyB":
       leftDock.toggle("bodies");
+      break;
+    case "KeyH":
+      rightDock.toggle("telemetry");
       break;
     case "KeyC":
       leftDock.open("catalog");
@@ -670,6 +752,23 @@ function frame(now: number): void {
     if (activeSystem) updateExoSystem(activeSystem, scene.timeS);
   }
 
+  /**
+   * How strongly to draw orbit lines this frame.
+   *
+   * An orbit is a navigation aid at system scale and pure noise up close. From low Earth
+   * orbit the other planets' orbits are 1-30 AU ellipses seen edge-on from the inside, so
+   * they render as straight streaks slashing right across the sky -- which is most of what
+   * made the view look broken rather than merely busy.
+   *
+   * One global strength rather than a per-orbit fade: the question "am I looking at a system
+   * or standing on a world" has a single answer per frame, and answering it per-orbit left
+   * every *other* planet's line drawn at full strength while you were on Earth.
+   *
+   * Uses the previous frame's altitude, which is a frame stale and entirely unnoticeable at
+   * these rates.
+   */
+  const orbitLineStrength = Math.min(Math.max((lastAltitudeRadii - 12) / 90, 0), 1);
+
   // 2. Resolve every body relative to the camera, in f64, and record surface distances.
   distances.clear();
   maxRelativeM = 0;
@@ -695,6 +794,22 @@ function frame(now: number): void {
         const parentRel = cameraRelative(camera, parent.frame);
         entry.orbitLine.position.set(parentRel.x, parentRel.y, parentRel.z);
       }
+
+      /**
+       * Fade an orbit out as you approach the body it belongs to.
+       *
+       * An orbit line is a navigation aid at system scale and pure noise from close in: seen
+       * from low Earth orbit, the planetary orbits are 1-30 AU ellipses that read as straight
+       * streaks slashing across the whole sky, which is what made the view look broken.
+       *
+       * Faded on the ratio of the camera's distance to the orbit's own radius, so each line
+       * disappears at its own scale rather than at one hardcoded distance -- Phobos's orbit
+       * and Neptune's are eight orders of magnitude apart.
+       */
+      const base = entry.data.kind === "moon" ? 0.1 : 0.22;
+      const material = entry.orbitLine.material as THREE.LineBasicMaterial;
+      material.opacity = base * orbitLineStrength;
+      entry.orbitLine.visible = material.opacity > 0.004;
     }
 
     const distance = Math.hypot(rel.x, rel.y, rel.z);
@@ -729,6 +844,7 @@ function frame(now: number): void {
   const altitudeM = activeSystem ? exoAltitudeM : (nearest?.altitudeM ?? 1e9);
   exoNearestName = exoNearest?.name ?? null;
   nearestEntry = nearest?.entry ?? null;
+  lastAltitudeRadii = nearest ? nearest.altitudeM / nearest.entry.data.radiusM : 1e9;
 
   // Keep the gazetteer's highlight on wherever you actually are, including when you arrive
   // somewhere by flying rather than by clicking. It re-renders only when the answer changes.
@@ -790,6 +906,36 @@ function frame(now: number): void {
     }
   }
 
+  /**
+   * Solid ground.
+   *
+   * Without this the camera passes straight through every world: you aim at Earth, hold the
+   * throttle, and emerge on the far side having seen the inside of the sphere. That is the
+   * whole of "the planets are transparent, there is no solid ground".
+   *
+   * The push-out is applied in the body's own frame, along the surface normal, so it works
+   * identically whether you are descending onto Titan or grazing the Sun. The Sun and the
+   * giants get a standoff rather than a surface, because neither has one.
+   */
+  grounded = null;
+  for (const entry of scene.bodies.values()) {
+    if (entry.frame !== camera.frame) continue;
+
+    const floor = collisionRadiusM(entry.data);
+    const d = Math.hypot(camera.position.x, camera.position.y, camera.position.z);
+    if (d >= floor || d === 0) continue;
+
+    const s = floor / d;
+    camera.position.x *= s;
+    camera.position.y *= s;
+    camera.position.z *= s;
+    // Kill the inward velocity too, or the throttle keeps pressing the camera into the
+    // floor and it jitters against the surface instead of resting on it.
+    controls.stop();
+    grounded = isLandable(entry.data) ? entry.data.name : null;
+    break;
+  }
+
   // 5. Sunlight and atmosphere follow the camera-relative frame like everything else.
   const sunRel = scene.bodies.get("sun")!.mesh.position;
   scene.sunLight.position.copy(sunRel);
@@ -798,7 +944,25 @@ function frame(now: number): void {
   deepSky.update(sunRel);
   exoplanets.update(sunRel);
   const sunDistance = sunRel.length();
-  scene.sunLight.intensity = Math.max(sunDistance * sunDistance * 1e-6, 1);
+
+  /**
+   * Relative insolation, normalised to 1.0 at Earth.
+   *
+   * The light is created with `decay: 0`, so Three applies no distance attenuation of its
+   * own and the inverse-square law has to be supplied here. The previous expression was
+   * `distance^2 * 1e-6`, which is the law upside down: it made a body *brighter* the further
+   * it sat from the Sun, and evaluated to 2.2e16 at 1 AU -- far beyond anything ACES could
+   * bring back into range.
+   *
+   * Written as (AU/d)^2 the physics is visible in the code: Mercury gets 6.7x Earth's light,
+   * Jupiter 3.7%, Neptune 0.1%. Clamped below because an unlit outer planet against black
+   * space is indistinguishable from a missing one.
+   */
+  const insolation = (AU_M / Math.max(sunDistance, 1)) ** 2;
+  // Exposure, not physics: the ratio above is correct, but a unit-intensity point light on a
+  // 0.3-albedo surface lands near 0.25 luminance after ACES, which reads as a dim grey ball.
+  // The gain is a display convention and is flagged as one in the HUD watermark.
+  scene.sunLight.intensity = Math.min(Math.max(insolation, 0.05), 12) * SUN_LIGHT_GAIN;
 
   if (atmosphere && atmosphereBodyId) {
     const host = scene.bodies.get(atmosphereBodyId)!;
@@ -810,6 +974,7 @@ function frame(now: number): void {
   renderScene();
 
   renderHud({
+    groundedOn: grounded,
     frameId: camera.frame.id,
     frameDepth: frameDepth(camera.frame),
     altitudeM,

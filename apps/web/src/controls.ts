@@ -60,6 +60,8 @@ export function createControls(canvas: HTMLCanvasElement): {
   ) => void;
   /** Aim along a direction, snapping rather than easing. Used on spawn and on arrival. */
   lookAt: (dx: number, dy: number, dz: number) => void;
+  /** Cut all motion. Used when the camera lands, so the throttle stops pressing in. */
+  stop: () => void;
   dispose: () => void;
 } {
   const state: ControlState = {
@@ -249,5 +251,17 @@ export function createControls(canvas: HTMLCanvasElement): {
     yaw = targetYaw;
   };
 
-  return { state, update, lookAt, dispose };
+  /**
+   * Come to rest.
+   *
+   * Called by the collision floor. Without it the throttle keeps driving the camera into the
+   * surface every frame while the floor pushes it back out, and the view buzzes against the
+   * ground instead of resting on it.
+   */
+  const stop = (): void => {
+    state.speedMs = MIN_SPEED_MS;
+    state.actualSpeedMs = 0;
+  };
+
+  return { state, update, lookAt, stop, dispose };
 }

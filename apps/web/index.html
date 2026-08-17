@@ -39,17 +39,10 @@
       }
 
       #hud {
-        position: fixed;
-        top: 16px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(6, 10, 20, 0.78);
-        border: 1px solid rgba(120, 170, 255, 0.22);
-        border-radius: 8px;
-        padding: 14px 16px;
-        min-width: 300px;
-        backdrop-filter: blur(8px);
-        pointer-events: none;
+        /* No geometry of its own -- it lives in the right rail. It used to be fixed at
+           top-centre, directly over the planet the camera frames in the middle of the view,
+           which is the same class of bug the dock was built to end. */
+        min-width: 0;
       }
       #hud h1 {
         font-size: 13px;
@@ -94,12 +87,16 @@
         left: 50%;
         transform: translateX(-50%);
         text-align: center;
+        pointer-events: auto;
+        max-height: 40px;
+        overflow: hidden;
+        transition: max-height 160ms ease;
+        cursor: pointer;
         background: rgba(6, 10, 20, 0.78);
         border: 1px solid rgba(120, 170, 255, 0.22);
         border-radius: 8px;
         padding: 12px 16px;
-        max-width: 460px;
-        pointer-events: none;
+        max-width: 720px;
       }
       #help b {
         color: #d8e8ff;
@@ -108,6 +105,26 @@
       #help p {
         color: #8ba4c9;
         margin-top: 6px;
+      }
+      /* The collapsed state shows this line and nothing else. */
+      #help .summary {
+        color: #8ba4c9;
+        white-space: nowrap;
+      }
+      #help .keys {
+        margin-top: 8px;
+      }
+      /* Expanded on hover or focus. Collapsed it is one line of keys; the explanation is
+         there when wanted rather than occupying the bottom of the screen permanently. */
+      #help:hover,
+      #help:focus-within,
+      #help.open {
+        max-height: 340px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #help {
+          transition: none;
+        }
       }
 
       #watermark {
@@ -1055,19 +1072,25 @@
   </head>
   <body>
     <div id="hud"></div>
-    <div id="help">
-      <b>W A S D</b> move &nbsp; <b>R / F</b> up / down &nbsp; <b>Q / E</b> roll &nbsp;
-      <b>Shift</b> boost &nbsp; <b>Space</b> brake &nbsp; <b>Wheel</b> throttle &nbsp;
-      <b>Esc</b> release mouse &nbsp; <b>Home</b> Solar System &nbsp; <b>I</b> provenance &nbsp;
-      <b>U</b> hide all panels &nbsp; <b>C</b> catalog &nbsp; <b>B</b> bodies &nbsp;
-      <b>K</b> map &nbsp; <b>M</b> missions &nbsp; <b>P</b> provenance &nbsp; <b>G</b> precision
-      <p>
-        Panels start collapsed — click a header's <b>▸</b> to open one, or the <b>‹</b>
-        <b>›</b> at a rail's edge to slide that whole side away. Inside the lists, click a
-        system or group heading to fold it. Scroll to set throttle; the ceiling rises as you
-        climb, so keep scrolling as you leave. Motion is frozen for now: positions are real,
-        nothing orbits or spins.
-      </p>
+    <div id="help" tabindex="0">
+      <span class="summary"
+        ><b>W A S D</b> fly &nbsp;·&nbsp; <b>Wheel</b> throttle &nbsp;·&nbsp; <b>U</b> hide UI
+        &nbsp;·&nbsp; hover for all controls</span
+      >
+      <div class="keys">
+        <b>R / F</b> up / down &nbsp; <b>Q / E</b> roll &nbsp; <b>Shift</b> boost &nbsp;
+        <b>Space</b> brake &nbsp; <b>Esc</b> release mouse &nbsp; <b>Home</b> Solar System
+        &nbsp; <b>C</b> catalog &nbsp; <b>B</b> bodies &nbsp; <b>K</b> map &nbsp;
+        <b>M</b> missions &nbsp; <b>H</b> telemetry &nbsp; <b>I</b> / <b>P</b> provenance &nbsp;
+        <b>G</b> precision
+        <p>
+          Panels start collapsed — click a header's <b>▸</b> to open one, or the <b>‹</b>
+          <b>›</b> at a rail's edge to slide that whole side away. Inside the lists, click a
+          system or group heading to fold it. You start on the daylit side of Earth; solid
+          worlds now stop the camera at their surface, and the Sun and the gas giants hold you
+          at a standoff because neither has ground to land on.
+        </p>
+      </div>
     </div>
     <div id="watermark"></div>
     <div id="click-to-start"><span>Click to capture mouse</span></div>
