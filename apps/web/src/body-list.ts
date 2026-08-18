@@ -28,7 +28,7 @@ type Group = { label: string; note: string; ids: readonly string[] };
 /**
  * Grouped the way the Solar System is actually organised, rather than by distance.
  *
- * Sorting 36 bodies by heliocentric distance interleaves the Galilean moons with Saturn's,
+ * Sorting 33 bodies by heliocentric distance interleaves the Galilean moons with Saturn's,
  * which is true and useless. What a traveller wants is "Jupiter, and the four things
  * orbiting it".
  */

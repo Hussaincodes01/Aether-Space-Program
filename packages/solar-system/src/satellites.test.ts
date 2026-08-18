@@ -219,7 +219,7 @@ describe("the cold end of the generator", () => {
 });
 
 describe("the map is actually populated", () => {
-  it("has the Sun, eight planets, seventeen moons and six dwarfs", () => {
+  it("has the Sun, eight planets, five dwarf planets and nineteen moons", () => {
     expect(SOLAR_SYSTEM.filter((b) => b.kind === "star")).toHaveLength(1);
     expect(SOLAR_SYSTEM.filter((b) => b.kind === "planet")).toHaveLength(8);
     expect(SOLAR_SYSTEM.filter((b) => b.kind === "moon")).toHaveLength(19); // +Moon, +Charon

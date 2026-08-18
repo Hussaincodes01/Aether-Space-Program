@@ -100,7 +100,7 @@ graph TD
     web["apps/web · 5,479 LOC<br/>Three.js, DOM, workers"]
 
     catalog["catalog · 1,901<br/>ingestion → PlanetModel"]
-    solar["solar-system · 1,469<br/>Kepler, 36 bodies"]
+    solar["solar-system · 1,469<br/>Kepler, 33 bodies"]
     terrain["terrain · 1,710<br/>gated operator compiler"]
     missions["missions · 1,077<br/>14 missions, evidence"]
     schema["schema · 1,484<br/>3-layer contract, resolver"]

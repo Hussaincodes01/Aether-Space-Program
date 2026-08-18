@@ -309,7 +309,7 @@ uses, and each one can name its own origin. See
 - ✅ **Catalog panel** (C) with per-planet measured/unknown counts under the current missions
 - ✅ **Precision overlay** (G) — frame, local coordinates, rebase flag, f32 limit warning
 - ✅ Rayleigh/Mie atmospheric scattering, coefficients derived from mean molecular weight
-- ✅ Real Solar System — 36 bodies: Sun, eight planets, 17 major moons, six dwarf planets,
+- ✅ Real Solar System — 33 bodies: the Sun, eight planets, five dwarf planets and 19 moons,
   ring systems. Every orbit validated against published sidereal periods
 - ✅ **Real sky**: 109,389 stars at measured parallax distances from HYG
 - ✅ **Deep sky**: 12,160 galaxies, clusters and nebulae from OpenNGC
