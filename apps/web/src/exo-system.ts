@@ -72,6 +72,8 @@ export interface ExoSystem {
   starFrame: Frame;
   starMesh: THREE.Mesh;
   starRadiusM: number;
+  /** L/L_sun, for exposure. NaN when the host has no measured luminosity. */
+  starLuminositySun: number;
   starLight: THREE.PointLight;
   planets: ExoPlanetBody[];
   /** Mean speculation across the system's planets. */
@@ -338,6 +340,7 @@ export function buildExoSystem(
     starFrame,
     starMesh,
     starRadiusM,
+    starLuminositySun: Math.pow(10, systems.logLuminosities[index]!),
     starLight,
     planets: bodies,
     speculation: bodies.length > 0 ? speculationTotal / bodies.length : 1,

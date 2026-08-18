@@ -15,7 +15,6 @@
  */
 
 import * as THREE from "three";
-import { AU as AU_M } from "@aether/units";
 import { envelopeWidth } from "@aether/missions";
 import { EARTH, secondsSinceJ2000 } from "@aether/solar-system";
 import {
@@ -70,6 +69,7 @@ import { buildPlanetModel, type PlanetModel } from "@aether/catalog";
 import { createDebugOverlay } from "./debug-overlay.js";
 import { createDock } from "./panel-dock.js";
 import { desaturate, speculationStyle } from "./speculation.js";
+import { adaptedExposure, insolationWattsPerM2, versusFullMoon } from "./exposure.js";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
@@ -189,14 +189,6 @@ function sunwardStandoff(
 
   return { x: (nx / n) * distanceM, y: (ny / n) * distanceM, z: (nz / n) * distanceM };
 }
-
-/**
- * Display gain on sunlight.
- *
- * Relative insolation between bodies stays physically correct; this only sets where the
- * whole scale sits against the tone mapper. Purely a viewing choice, like an exposure dial.
- */
-const SUN_LIGHT_GAIN = 3.6;
 
 // Begin in low Earth orbit on the daylit side. Home first.
 const earthEntry = scene.bodies.get("earth")!;
@@ -826,7 +818,6 @@ function frame(now: number): void {
     activeSystem.starMesh.position.set(starRel.x, starRel.y, starRel.z);
     activeSystem.starLight.position.copy(activeSystem.starMesh.position);
     const starDistance = Math.hypot(starRel.x, starRel.y, starRel.z);
-    activeSystem.starLight.intensity = Math.max(starDistance * starDistance * 1e-6, 1);
 
     for (const body of activeSystem.planets) {
       const rel = cameraRelative(camera, body.frame);
@@ -838,6 +829,23 @@ function frame(now: number): void {
         exoNearest = body;
       }
     }
+
+    /**
+     * Adaptive exposure for the host star, computed once the nearest planet is known.
+     *
+     * The old expression was `distance^2 * 1e-6` -- the inverse square law inverted, so a
+     * planet further from its star rendered brighter. Luminosity genuinely matters here too:
+     * TRAPPIST-1 is 0.00052 L_sun, its planets orbit at 0.01-0.06 AU, and they still receive
+     * roughly Earth's illumination. Assuming a Sun-like host would render them hundreds of
+     * times too bright.
+     */
+    const luminosity = Number.isFinite(activeSystem.starLuminositySun)
+      ? activeSystem.starLuminositySun
+      : 1;
+    const exoLitDistanceM =
+      (exoNearest as ExoPlanetBody | null)?.elements.semiMajorAxisM ??
+      Math.max(starDistance, activeSystem.starRadiusM * 10);
+    activeSystem.starLight.intensity = adaptedExposure(exoLitDistanceM, luminosity);
   }
 
   const nearest = nearestBody(scene, distances);
@@ -946,23 +954,28 @@ function frame(now: number): void {
   const sunDistance = sunRel.length();
 
   /**
-   * Relative insolation, normalised to 1.0 at Earth.
+   * Expose for the world you are looking at, not for where the camera happens to be.
    *
-   * The light is created with `decay: 0`, so Three applies no distance attenuation of its
-   * own and the inverse-square law has to be supplied here. The previous expression was
-   * `distance^2 * 1e-6`, which is the law upside down: it made a body *brighter* the further
-   * it sat from the Sun, and evaluated to 2.2e16 at 1 AU -- far beyond anything ACES could
-   * bring back into range.
+   * The light is created with `decay: 0`, so Three applies no attenuation of its own and
+   * every body in view receives this one intensity. Driving it from the *nearest body's*
+   * distance from the Sun is therefore adaptive exposure: whatever fills the screen is lit
+   * correctly, exactly as a camera or an eye would adjust on arrival.
    *
-   * Written as (AU/d)^2 the physics is visible in the code: Mercury gets 6.7x Earth's light,
-   * Jupiter 3.7%, Neptune 0.1%. Clamped below because an unlit outer planet against black
-   * space is indistinguishable from a missing one.
+   * `adaptedExposure` compresses four decades of real illumination into about 6.4:1 while
+   * keeping the ordering intact. The unmodified physics is still reported in the HUD, so
+   * the compression is a stated viewing transform rather than a quiet edit to the data.
    */
-  const insolation = (AU_M / Math.max(sunDistance, 1)) ** 2;
-  // Exposure, not physics: the ratio above is correct, but a unit-intensity point light on a
-  // 0.3-albedo surface lands near 0.25 luminance after ACES, which reads as a dim grey ball.
-  // The gain is a display convention and is flagged as one in the HUD watermark.
-  scene.sunLight.intensity = Math.min(Math.max(insolation, 0.05), 12) * SUN_LIGHT_GAIN;
+  const sunMesh = scene.bodies.get("sun")!.mesh;
+  const litBody = nearestEntry ?? earthEntry;
+  const litHelioDistanceM = litBody.mesh.position.distanceTo(sunMesh.position);
+
+  scene.sunLight.position.copy(sunRel);
+  scene.sunLight.intensity = adaptedExposure(litHelioDistanceM);
+
+  // Star positions are stored relative to the Sun, so the whole field rides with it.
+  starfield.update(sunRel);
+  deepSky.update(sunRel);
+  exoplanets.update(sunRel);
 
   if (atmosphere && atmosphereBodyId) {
     const host = scene.bodies.get(atmosphereBodyId)!;
@@ -975,6 +988,8 @@ function frame(now: number): void {
 
   renderHud({
     groundedOn: grounded,
+    insolationWm2: insolationWattsPerM2(litHelioDistanceM),
+    insolationVsFullMoon: versusFullMoon(litHelioDistanceM),
     frameId: camera.frame.id,
     frameDepth: frameDepth(camera.frame),
     altitudeM,
