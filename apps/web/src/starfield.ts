@@ -128,6 +128,8 @@ function buildGeometry(catalog: StarCatalog): THREE.BufferGeometry {
 function createMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: /* glsl */ `
+      #include <common>
+      #include <logdepthbuf_pars_vertex>
       attribute float size;
       varying vec3 vColour;
       void main() {
@@ -137,12 +139,16 @@ function createMaterial(): THREE.ShaderMaterial {
         // magnitude.
         gl_PointSize = size;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        #include <logdepthbuf_vertex>
       }
     `,
     fragmentShader: /* glsl */ `
-      precision mediump float;
+      precision highp float;
+      #include <common>
+      #include <logdepthbuf_pars_fragment>
       varying vec3 vColour;
       void main() {
+        #include <logdepthbuf_fragment>
         vec2 d = gl_PointCoord - vec2(0.5);
         float r = length(d) * 2.0;
         // Gaussian-ish falloff reads as a star; a hard disc reads as a sprite.
@@ -153,8 +159,13 @@ function createMaterial(): THREE.ShaderMaterial {
     `,
     vertexColors: true,
     transparent: true,
+    // Depth *write* stays off -- these are additive point sprites and must not occlude one
+    // another. Depth *test* is on, so solid geometry occludes them. Both halves are needed:
+    // the test alone was useless until the shaders above joined the logarithmic depth
+    // pipeline, because the planets encode depth logarithmically and these did not, so the
+    // comparison was between two different encodings.
     depthWrite: false,
-    depthTest: false,
+    depthTest: true,
     blending: THREE.AdditiveBlending,
   });
 }

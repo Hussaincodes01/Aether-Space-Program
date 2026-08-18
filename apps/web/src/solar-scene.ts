@@ -96,19 +96,46 @@ const SURFACE_MAPS = new Set([
 /**
  * Can you stand on this?
  *
- * The Sun has no surface to land on -- the photosphere is a plasma opacity boundary, not
- * ground -- and neither do the four giants, whose "surface" is a 1-bar pressure level with
- * tens of thousands of kilometres of increasingly dense fluid beneath it. Approaching either
- * is fine; arriving is not, so the collision floor for these sits well above the nominal
- * radius rather than on it.
+ * Density alone cannot answer it, which a test caught: Neptune is 1638 kg/m3, *less* dense
+ * than Titan at 1882 and Pluto at 1854. A single density threshold either calls Neptune
+ * solid or calls Titan a gas giant, and both are wrong.
+ *
+ * Radius is the missing half. Retaining a hydrogen/helium envelope takes mass, so the two
+ * together separate the populations cleanly:
+ *
+ *   - largest solid body here is Earth at 1.00 R_earth
+ *   - smallest fluid body here is Neptune at 3.86 R_earth
+ *
+ * The cut at 2 R_earth sits in that gap on purpose: it is also roughly where the observed
+ * exoplanet radius valley falls, so the same rule keeps working when it is applied to worlds
+ * outside the Solar System, where a dense 2.5 R_earth super-Earth stays solid and a
+ * low-density 3 R_earth mini-Neptune does not.
+ *
+ * "No solid surface" is a real statement about these bodies, not a rendering convenience.
+ * The Sun's photosphere is a plasma opacity boundary; a giant's "surface" is a 1-bar
+ * pressure level with tens of thousands of kilometres of increasingly dense fluid beneath.
+ * You can approach either. You cannot arrive.
  */
 export function isLandable(body: SolarBody): boolean {
   if (body.kind === "star") return false;
-  // Bulk density below ~1500 kg/m3 with no measured surface pressure floor means a fluid
-  // envelope all the way down. This is the same threshold the terrain gates use.
+
   const density = body.massKg / ((4 / 3) * Math.PI * body.radiusM ** 3);
+  const radiiEarth = body.radiusM / EARTH_RADIUS_M;
+
+  // Big and light: the mass is in a fluid envelope, and there is nothing to land on.
+  if (radiiEarth > FLUID_ENVELOPE_RADII_EARTH && density < FLUID_ENVELOPE_MAX_DENSITY) {
+    return false;
+  }
+
+  // Everything else needs to be dense enough to be condensed rather than a puffball.
   return density >= MIN_LANDABLE_DENSITY_KG_M3;
 }
+
+const EARTH_RADIUS_M = 6.3781e6;
+
+/** Above this radius, with a low density, a body has kept a hydrogen/helium envelope. */
+export const FLUID_ENVELOPE_RADII_EARTH = 2;
+export const FLUID_ENVELOPE_MAX_DENSITY = 2500;
 
 /** Matches the terrain package's solid-surface gate, so the two never disagree. */
 export const MIN_LANDABLE_DENSITY_KG_M3 = 1500;
@@ -137,14 +164,37 @@ function bodySphere(body: SolarBody): THREE.Mesh {
   const map = SURFACE_MAPS.has(body.id) ? textureLoader.load(`textures/${body.id}.jpg`) : null;
   if (map) map.colorSpace = THREE.SRGBColorSpace;
 
+  /**
+   * Base truth: a body is opaque.
+   *
+   * Every one of these flags is already the Three.js default, and all of them are written
+   * out anyway. That is deliberate. "Planets are solid" is a property of this project, not
+   * an accident of a library's defaults -- there is no such thing as a see-through planet,
+   * and `solar-scene.test.ts` asserts these values so a future edit that makes a body
+   * translucent fails a test instead of shipping.
+   *
+   * The bug this pins down was not here, though. The planets were opaque all along; the
+   * star, deep-sky and exoplanet point layers were drawing straight over them with depth
+   * testing disabled, so 110,000 stars painted across every planetary disc and the planet
+   * read as transparent. Opacity is asserted at both ends now.
+   */
+  const common = {
+    transparent: false,
+    opacity: 1,
+    depthWrite: true,
+    depthTest: true,
+    side: THREE.FrontSide,
+  } as const;
+
   const material =
     body.kind === "star"
-      ? new THREE.MeshBasicMaterial({ color: map ? 0xffffff : body.tintHex, map })
+      ? new THREE.MeshBasicMaterial({ color: map ? 0xffffff : body.tintHex, map, ...common })
       : new THREE.MeshStandardMaterial({
           color: map ? 0xffffff : body.tintHex,
           map,
           roughness: 0.92,
           metalness: 0.02,
+          ...common,
         });
 
   const mesh = new THREE.Mesh(geometry, material);
