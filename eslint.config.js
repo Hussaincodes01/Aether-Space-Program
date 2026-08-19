@@ -23,6 +23,8 @@ export default tseslint.config(
       "**/coverage/**",
       "apps/web/public/**",
       "packages/*/scripts/**",
+      // Vendored Python tool; see tools/aether-harness/VENDORED.md.
+      "tools/aether-harness/**",
     ],
   },
 

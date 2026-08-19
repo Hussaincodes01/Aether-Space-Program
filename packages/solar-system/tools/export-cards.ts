@@ -78,20 +78,40 @@ function toCard(body: SolarBody) {
     stellar_age_gyr: q(4.568, "Gyr"),
   };
 
+  /**
+   * `semi_major_axis_au` carries the orbit around the *primary*, not around the Sun.
+   *
+   * The harness uses this one field for two different physical purposes, and for a moon they
+   * disagree by three orders of magnitude:
+   *
+   *   - insolation wants the heliocentric distance
+   *   - tidal heating and tidal locking want the orbit around the body it actually orbits
+   *
+   * Supplying the heliocentric value for both is what made Io come out as an ice world. Its
+   * tidal flux was computed as though it orbited the Sun at 5.203 AU rather than Jupiter at
+   * 0.00282 AU, and the relation goes as a^-7.5, so the result collapsed to zero. The harness
+   * is calibrated correctly -- its own comment cites Io at a = 0.00282 AU -- so the error was
+   * entirely in what this exporter handed it.
+   *
+   * Insolation is therefore supplied explicitly below from the heliocentric distance, and
+   * `derive()` prefers a supplied insolation over deriving one from the axis, so each
+   * consumer gets the distance it actually needs.
+   */
+  if (body.elements) {
+    obs.semi_major_axis_au = q(body.elements.semiMajorAxisM / AU, "AU");
+    obs.eccentricity = q(body.elements.eccentricity, "-");
+    obs.orbital_period_days = q(orbitalPeriod(body.elements) / 86_400, "d");
+  }
+
   if (helioAu !== null) {
-    obs.semi_major_axis_au = q(helioAu, "AU");
-    // Inverse square from the resolved heliocentric distance -- derived, and labelled so.
+    // Inverse square from the heliocentric distance resolved up the parent chain, so a moon
+    // is lit by its planet's orbit rather than by its own.
     obs.insolation_earth = q(
       1 / (helioAu * helioAu),
       "S_earth",
       "derived",
       "inverse square law",
     );
-  }
-
-  if (body.elements) {
-    obs.eccentricity = q(body.elements.eccentricity, "-");
-    obs.orbital_period_days = q(orbitalPeriod(body.elements) / 86_400, "d");
   }
 
   if (body.rotationPeriodS !== 0) {

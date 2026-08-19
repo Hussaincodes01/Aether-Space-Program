@@ -1,0 +1,46 @@
+[
+  {
+    "planet_id": "Kepler-442 b",
+    "host_star": "Kepler-442",
+    "notes": ["temperate super-Earth; one of the highest-ranked habitability candidates"],
+    "obs": {
+      "radius_earth":        {"value": 1.34,  "unit": "R_earth", "sigma": 0.18, "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "mass_earth":          {"value": 2.36,  "unit": "M_earth", "sigma": 0.9,  "provenance": "derived",  "source": "mass-radius relation"},
+      "insolation_earth":    {"value": 0.70,  "unit": "S_earth", "sigma": 0.16, "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "semi_major_axis_au":  {"value": 0.409, "unit": "AU",      "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "orbital_period_days": {"value": 112.3, "unit": "d",       "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "eccentricity":        {"value": 0.04,  "unit": "-",       "provenance": "assumed",  "source": "population prior"},
+      "stellar_teff_k":      {"value": 4402,  "unit": "K",       "sigma": 100,  "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "stellar_mass_sun":    {"value": 0.61,  "unit": "M_sun",   "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "stellar_age_gyr":     {"value": 2.9,   "unit": "Gyr",     "sigma": 3.0,  "provenance": "measured", "source": "isochrone fit"}
+    }
+  },
+  {
+    "planet_id": "LHS 3844 b",
+    "host_star": "LHS 3844",
+    "notes": ["Spitzer phase curve implies little to no atmosphere; bare rock"],
+    "obs": {
+      "radius_earth":       {"value": 1.303,   "unit": "R_earth", "sigma": 0.022, "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "mass_earth":         {"value": 2.25,    "unit": "M_earth", "provenance": "derived", "source": "mass-radius relation"},
+      "insolation_earth":   {"value": 70.0,    "unit": "S_earth", "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "semi_major_axis_au": {"value": 0.00622, "unit": "AU",      "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "stellar_mass_sun":   {"value": 0.158,   "unit": "M_sun",   "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "stellar_teff_k":     {"value": 3036,    "unit": "K",       "provenance": "measured", "source": "NASA Exoplanet Archive"}
+    }
+  },
+  {
+    "planet_id": "TRAPPIST-1 e",
+    "host_star": "TRAPPIST-1",
+    "notes": ["tidally locked candidate in the habitable zone of an ultracool dwarf"],
+    "obs": {
+      "radius_earth":        {"value": 0.920,   "unit": "R_earth", "sigma": 0.013, "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "mass_earth":          {"value": 0.692,   "unit": "M_earth", "sigma": 0.022, "provenance": "measured", "source": "TTV analysis"},
+      "insolation_earth":    {"value": 0.646,   "unit": "S_earth", "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "semi_major_axis_au":  {"value": 0.02925, "unit": "AU",      "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "orbital_period_days": {"value": 6.099,   "unit": "d",       "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "eccentricity":        {"value": 0.005,   "unit": "-",       "provenance": "measured", "source": "TTV analysis"},
+      "stellar_mass_sun":    {"value": 0.0898,  "unit": "M_sun",   "provenance": "measured", "source": "NASA Exoplanet Archive"},
+      "stellar_age_gyr":     {"value": 7.6,     "unit": "Gyr",     "provenance": "measured", "source": "kinematics"}
+    }
+  }
+]
