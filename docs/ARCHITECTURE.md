@@ -219,14 +219,14 @@ would hide it.
 
 Carried forward deliberately. A plan that omits these is not a plan.
 
-| #   | Gap                                                                                                                                                                                                        | Severity                                          | Evidence                                                      |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
-| G1  | **`depth.ts` has zero consumers.** Cascaded frusta / reversed-Z is written and exported; the client still runs Three's per-vertex log depth buffer, which interpolates incorrectly across large triangles. | **High** — this is the stated P0 in `main.ts:100` | `grep` finds it referenced only by its own package `index.ts` |
-| G2  | **No LLM composer exists.** The containment schema, forbidden-field scan and boundary tests are all built and tested; nothing calls a model. The PRD's central premise is unimplemented.                   | **High**                                          | `composeTerrain`, `llmCompose` → 0 files                      |
-| G3  | **Motion is frozen** (`FROZEN = true`). Positions are real; nothing rotates or revolves.                                                                                                                   | Medium — deliberate, user-requested               | `main.ts`                                                     |
-| G4  | **No browser-level verification.** Playwright is not installed; all UI evidence is jsdom assertions plus a clean build.                                                                                    | Medium                                            | no `playwright` in any `package.json`                         |
-| G5  | **Terrain is never scored against ground truth.** Tests assert _which operators_ fire on Mars, not whether the output resembles Mars. The calibration harness was planned and never built.                 | Medium                                            | no scoring code in `packages/terrain`                         |
-| G6  | Catalogue seed covers 3 systems (Sol, Proxima Centauri, TRAPPIST-1); the other 4,719 come from the binary catalogue without the full typed-provenance path.                                                | Low                                               | `packages/catalog/src/seed/`                                  |
+| #   | Gap                                                                                                                                                                                                                                                      | Severity                                          | Evidence                                                      |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
+| G1  | **`depth.ts` has zero consumers.** Cascaded frusta / reversed-Z is written and exported; the client still runs Three's per-vertex log depth buffer, which interpolates incorrectly across large triangles.                                               | **High** — this is the stated P0 in `main.ts:100` | `grep` finds it referenced only by its own package `index.ts` |
+| G2  | ~~**No LLM composer exists.**~~ **RETIRED, see §13.1.** `aether-harness` implements it in 4,352 lines of Python: 76 checks green, and its determinism verified here against its own shipped ledger, bit-for-bit. Still unwired to the TypeScript client. | ~~High~~ **Closed**                               | 76/76 tests; hashes reproduce the demo ledger                 |
+| G3  | **Motion is frozen** (`FROZEN = true`). Positions are real; nothing rotates or revolves.                                                                                                                                                                 | Medium — deliberate, user-requested               | `main.ts`                                                     |
+| G4  | **No browser-level verification.** Playwright is not installed; all UI evidence is jsdom assertions plus a clean build.                                                                                                                                  | Medium                                            | no `playwright` in any `package.json`                         |
+| G5  | **Terrain is never scored against ground truth.** Tests assert _which operators_ fire on Mars, not whether the output resembles Mars. The calibration harness was planned and never built.                                                               | Medium                                            | no scoring code in `packages/terrain`                         |
+| G6  | Catalogue seed covers 3 systems (Sol, Proxima Centauri, TRAPPIST-1); the other 4,719 come from the binary catalogue without the full typed-provenance path.                                                                                              | Low                                               | `packages/catalog/src/seed/`                                  |
 
 ---
 
@@ -533,3 +533,125 @@ Stage 4 moved from ninth to fifth deliberately. On 2026-08-15 the application op
 black sphere, with no collision anywhere and the inverse-square law written upside down — and
 **every one of those defects passed 485 unit tests and a clean build.** Browser verification is
 not polish. It is the only gate that catches the class of defect this project actually produces.
+
+---
+
+## 13. Found on disk: two assets the plan did not know about
+
+Added 2026-08-19, after inspecting `d:\TON618Nutshell.com\`. Both were sitting beside the
+repo the whole time. They **retire the largest open gap in §7 and answer the open question in
+§12.3**, and they change the sequencing in §12.7.
+
+### 13.1 `aether-harness` — G2 is already solved, in Python
+
+4,352 lines. Verified, not taken on trust:
+
+| Check                                            | Result                                     |
+| ------------------------------------------------ | ------------------------------------------ |
+| `python -m tests.test_harness`                   | **76 checks pass**, 10 groups, exit 0      |
+| Offline end-to-end build                         | 3/3 planets frozen, rendered, previewed    |
+| Determinism, two independent runs, clean ledgers | **identical content hashes**               |
+| Reproduces the shipped demo ledger               | **bit-for-bit match on all three planets** |
+
+That last row is the one that matters. Independent runs on this machine reproduce hashes
+frozen on another, which is the whole claim.
+
+**What it is.** An LLM harness for parameterised surface generation. Observational data goes
+in; a frozen, content-addressed JSON spec comes out. The model selects operators and
+parameters from a fixed catalog — it never writes code, never invents a parameter name, and
+never authors a number physics can compute.
+
+The architecture is the one §8 Stage 2 specifies, arrived at independently:
+
+- **Physics narrows the action space before the model is called.** Rivers are not
+  "discouraged" on an airless rock; the operator is absent from the catalog, absent from the
+  JSON schema's `op` enum, and rejected by the validator if it appears anyway.
+- **One declaration drives everything.** Prompt, JSON schema, validator and executor are all
+  generated from the operator registry, so they cannot drift.
+- **Failures are repaired, not re-rolled.** Out-of-bounds values are clamped and recorded;
+  unknown operators become structured errors fed back in-context. A provider outage falls
+  back to a deterministic archetype template — a universe is never lost.
+- **Per-value provenance**: `measured`, `derived`, `assumed`, `ai_inferred`, `repaired`. A
+  TRAPPIST-1 e spec carries 9 `ai_inferred`, 10 `assumed`, 1 `repaired`, each named.
+
+26 operators in eight categories. `erosion.stream_power` integrates
+`dz/dt = U − K·R·A^m·S^n + D·∇²z` with real D8 routing, so valley spacing and profile
+concavity are emergent rather than painted. Noise is evaluated in 3D on the sphere, so there
+is no antimeridian seam and the spec stays projection-independent.
+
+**It also covers §8 Stage 3.** The suite asserts Solar System calibration directly — Venus,
+Earth, Mars and Titan retain atmospheres, Moon, Mercury and LHS 3844 b come out airless, and
+the archetype classifier sorts all seven correctly. LHS 3844 b renders as bare cratered rock,
+matching Spitzer.
+
+**Two defects found while checking it:**
+
+1. The README says "the spec never encodes a resolution", but `grid.base_resolution_lat` is
+   in the spec and changes the content hash. Building at `--res 192` and `--res 224` forks
+   the universe. Either the field moves out of the hashed body or the claim comes out of the
+   README; the behaviour is defensible, the sentence is not.
+2. `_accumulate` is an explicit Python loop over cells and is the bottleneck above ~256 rows.
+   The README says so; it is a real constraint on the port.
+
+**Integration.** This is Python; Aether is TypeScript. The harness's own answer is the right
+one: _the frozen spec is the product, the numpy executor is a reference implementation._
+`stage_seed(i)` is pure SplitMix64, so a TypeScript executor reproduces the same terrain
+bit-for-bit. Two options, and the second is better:
+
+- Port the 26 operators to `packages/terrain`. Large, and duplicates a working implementation.
+- **Treat the harness as an offline build step.** It emits frozen specs; the web client reads
+  `pipeline[]` and dispatches on `op`. No Python at runtime, no API, the ledger ships as a
+  static asset like every other catalogue, and the existing gated compiler stays the thing
+  that executes. This matches §12.3's "precompute offline first" exactly.
+
+### 13.2 `terrain-diffusion` — the paper, and the Minecraft mod
+
+[arXiv:2512.08309](https://arxiv.org/abs/2512.08309), Alexander Goslin, **MIT licence**.
+`https://github.com/xandergos/terrain-diffusion`.
+
+This is the citation §12.3 asked for, and it is a better fit than assumed, because its
+headline property is the one Aether requires:
+
+> **InfiniteDiffusion** — lazy, unbounded diffusion sampling with **O(1) random access and
+> seed-consistency**.
+
+O(1) random access with a stable seed _is_ the chunk-function contract §12.2 says a voxel
+world needs: terrain as a pure function of position and seed, generated on demand, never
+stored. A diffusion model that could only produce whole heightfields would not have worked.
+
+It also ships **a Fabric mod that replaces Minecraft's world generator**
+(`xandergos/terrain-diffusion-mc`), which changes §12.6 materially — the Java side that
+section proposed writing already exists, under MIT.
+
+**Practical constraints, checked:**
+
+- Torch 2.13.0 is installed here, **CPU only, no CUDA**. Diffusion on CPU is slow enough that
+  offline precompute is not merely preferable, it is the only viable path on this machine.
+- Weights are on Hugging Face (`xandergos/terrain-diffusion` collection) — not vendored, so
+  they are a download and a licence check away.
+- There is a Flask/FastAPI inference server, so an API path exists if precompute proves
+  insufficient.
+
+**The containment question is unchanged and still binding.** A diffusion model is a strong
+prior over what landscape _looks_ like and no prior at all over what is consistent with 0.4 g
+and 3 W/m². So it enters as a **producer of driver fields** — `uplift`, `erodibility`,
+`runoff` — which the harness already carries as channels and feeds into `stream_power`. The
+physics gate stays in front, the output stays `ai_inferred`, and nothing reaches `ScienceSpec`.
+The harness README notes this drop-in point explicitly, which is a good sign the two designs
+agree.
+
+### 13.3 Revised sequencing
+
+§12.7 assumed the composer had to be built and the paper found. Both are done, so the order
+changes:
+
+| Was | Now     | Item                                              | Why it moved                                  |
+| --- | ------- | ------------------------------------------------- | --------------------------------------------- |
+| 6   | —       | Build the composer (11 d)                         | **Retired.** It exists, tested, deterministic |
+| 7   | —       | Calibration harness (4 d)                         | **Retired.** The Solar System suite covers it |
+| —   | **new** | Wire harness specs into `packages/terrain` (~4 d) | Read `pipeline[]`, dispatch on `op`           |
+| —   | **new** | Fix the two harness defects (~0.5 d)              | Resolution-in-hash, and the README claim      |
+| 9   | 9       | Voxel view mode                                   | Now has a real chunk function to build on     |
+| 10  | 10      | Minecraft export                                  | Reassess against the existing MIT Fabric mod  |
+
+Roughly **15 days retired** from the plan by two folders that were already on disk.
