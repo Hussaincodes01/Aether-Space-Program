@@ -39,13 +39,28 @@ export interface PlanetContext {
 }
 
 /**
- * Below this bulk density a body is envelope-dominated and has no solid surface at all.
+ * Whether a body has a solid surface is a question about a retained envelope, not density.
  *
- * Jupiter is 1326 kg/m3. Every surface-shaping operator must check this: impacts happen on
- * Jupiter (Shoemaker-Levy 9 did), but there is nothing to hold a crater, and an operator
- * that forgets to ask will happily carve one into a gas giant.
+ * A bare density threshold of 1500 kg/m3 was used here, and it is wrong in the direction that
+ * matters: water ice is 917 kg/m3, so it excluded five genuinely solid bodies from having any
+ * terrain generated at all -- Mimas at 1150, Iapetus 1088, Miranda 1200, Rhea 1236 and Deimos
+ * 1479. Mimas's Herschel crater spans a third of its diameter and Iapetus has an equatorial
+ * ridge 13 km high; these are not featureless.
+ *
+ * The bodies that genuinely have nowhere to stand are the ones massive enough to have held on
+ * to hydrogen and helium, and that takes both size and low density. Jupiter is 1240 kg/m3 at
+ * 11.2 Earth radii; Mimas is 1150 at 0.03. Density alone cannot separate them, radius can.
+ *
+ * Below the floor there is no condensed matter at all. Water ice sits at 917 and even a
+ * porous rubble pile is above 500, so nothing real is excluded by it.
  */
-export const MIN_SOLID_SURFACE_DENSITY_KG_M3 = 1500;
+export const MIN_CONDENSED_DENSITY_KG_M3 = 500;
+
+/** Above this radius, with a low density, a body has kept a hydrogen/helium envelope. */
+export const ENVELOPE_RADII_EARTH = 2;
+export const ENVELOPE_MAX_DENSITY_KG_M3 = 2500;
+
+const EARTH_RADIUS_M = 6.3781e6;
 
 /** Why an operator may or may not run. Rendered verbatim in the provenance inspector. */
 export interface Admissibility {
@@ -117,7 +132,17 @@ export interface EvalContext {
 }
 
 export function hasSolidSurface(context: PlanetContext): boolean {
-  return context.bulkDensityKgM3 >= MIN_SOLID_SURFACE_DENSITY_KG_M3;
+  if (context.bulkDensityKgM3 < MIN_CONDENSED_DENSITY_KG_M3) return false;
+
+  // Big and light: the mass is in a fluid envelope and there is nothing to shape.
+  const radiiEarth = context.radiusM / EARTH_RADIUS_M;
+  if (
+    radiiEarth > ENVELOPE_RADII_EARTH &&
+    context.bulkDensityKgM3 < ENVELOPE_MAX_DENSITY_KG_M3
+  ) {
+    return false;
+  }
+  return true;
 }
 
 /** The rejection every surface operator returns on an envelope-dominated body. */

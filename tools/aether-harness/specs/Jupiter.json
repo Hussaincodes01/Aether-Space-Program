@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.2.0",
+  "engine_version": "aether-harness/0.4.0",
+  "planet_id": "Jupiter",
+  "universe_seed": 20260819,
+  "archetype": "volatile_envelope",
+  "grid": {
+    "body_radius_m": 71412416.23681034,
+    "base_resolution_lat": 128,
+    "elevation_range_m": 600.0,
+    "sea_level_quantile": null,
+    "reference_datum_m": 0.0
+  },
+  "pipeline": [
+    {
+      "id": "base",
+      "op": "noise.spectral_fbm",
+      "params": {
+        "amplitude": 1.0,
+        "beta": 2.9,
+        "frequency": 3.0,
+        "octaves": 6
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Banded fluid envelope, not a solid surface: smooth and long-wavelength.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "bands",
+      "op": "field.remap_curve",
+      "params": {
+        "exponent": 1.6,
+        "pivot": 0.5,
+        "terrace_steps": 8,
+        "terrace_strength": 0.4
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Terracing approximates zonal banding.",
+      "channel_overrides": {}
+    }
+  ],
+  "derived": {
+    "surface_gravity_ms2": 24.80837928052308,
+    "escape_velocity_kms": 59.56576653507717,
+    "bulk_density_kgm3": 1244.4525918602624,
+    "equilibrium_temp_k": 112.07728188958724,
+    "insolation_earth": 0.03694121817367083,
+    "shoreline_ratio": 3.06289616217968e-06,
+    "tidal_lock_probability": 2.3028185709712163e-08,
+    "tidal_heating_wm2": 4.874745529808076e-10,
+    "max_relief_m": 7363.931770083486,
+    "archetype": "volatile_envelope",
+    "archetype_confidence": 0.895,
+    "capabilities": [
+      "atmosphere",
+      "cryosphere",
+      "impacts",
+      "solid_surface",
+      "volatile_ice"
+    ],
+    "provenance": {
+      "surface_gravity_ms2": "derived",
+      "escape_velocity_kms": "derived",
+      "bulk_density_kgm3": "derived",
+      "equilibrium_temp_k": "derived",
+      "shoreline_ratio": "derived",
+      "tidal_lock_probability": "derived",
+      "tidal_heating_wm2": "derived",
+      "max_relief_m": "derived"
+    },
+    "notes": []
+  },
+  "provenance_map": {
+    "grid.elevation_range_m": "ai_inferred",
+    "pipeline.bands.exponent": "ai_inferred",
+    "pipeline.bands.pivot": "assumed",
+    "pipeline.bands.terrace_steps": "ai_inferred",
+    "pipeline.bands.terrace_strength": "ai_inferred",
+    "pipeline.base.amplitude": "assumed",
+    "pipeline.base.beta": "ai_inferred",
+    "pipeline.base.frequency": "ai_inferred",
+    "pipeline.base.octaves": "ai_inferred"
+  },
+  "envelope_hash": "69280ed12c845da4",
+  "revision": 1,
+  "supersedes": null,
+  "llm": {
+    "provider": "mock",
+    "model": "archetype-template",
+    "temperature": 0.0,
+    "prompt_hash": "0eed9b13e12f2793",
+    "registry_version": "751d35b7bd0b",
+    "attempts": 1,
+    "repairs": [],
+    "rejected": [],
+    "fallback_used": false,
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "latency_s": 0.0
+  },
+  "content_hash": "212b4540d407ce89ae2d8b2630596d37",
+  "frozen_at": "2026-08-19T20:01:34Z"
+}

@@ -1,0 +1,154 @@
+{
+  "schema_version": "1.2.0",
+  "engine_version": "aether-harness/0.4.0",
+  "planet_id": "Phobos",
+  "universe_seed": 20260819,
+  "archetype": "airless_rock",
+  "grid": {
+    "body_radius_m": 11257.454414324015,
+    "base_resolution_lat": 128,
+    "elevation_range_m": 562.0587309224954,
+    "sea_level_quantile": null,
+    "reference_datum_m": 0.0
+  },
+  "pipeline": [
+    {
+      "id": "base",
+      "op": "noise.spectral_fbm",
+      "params": {
+        "amplitude": 1.0,
+        "beta": 1.7,
+        "frequency": 3.0,
+        "octaves": 8
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "No erosion to smooth the surface, so a shallow spectral slope is right.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "basins",
+      "op": "impact.crater_field",
+      "params": {
+        "central_peak_threshold": 0.04,
+        "density": 0.85,
+        "depth_scale": 0.15,
+        "ejecta_extent": 1.6,
+        "max_diameter_frac": 0.3,
+        "min_diameter_frac": 0.015,
+        "rim_height": 0.35,
+        "size_exponent": 2.0
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Airless: full impactor flux reaches the ground, up to basin scale.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "talus",
+      "op": "erosion.thermal_talus",
+      "params": {
+        "critical_slope": 0.9,
+        "iterations": 10,
+        "rate": 0.4
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Regolith still fails at the angle of repose; low g permits steep walls.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "micro",
+      "op": "field.blend_noise",
+      "params": {
+        "amplitude": 0.03,
+        "frequency": 40.0,
+        "octaves": 3,
+        "slope_gated": true
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Micrometeorite gardening as high-frequency micro-relief.",
+      "channel_overrides": {}
+    }
+  ],
+  "derived": {
+    "surface_gravity_ms2": 0.005605830309732228,
+    "escape_velocity_kms": 0.0112421854958366,
+    "bulk_density_kgm3": 1783.8299102313254,
+    "equilibrium_temp_k": 242.1605591008727,
+    "insolation_earth": 0.43072013128348985,
+    "shoreline_ratio": 430720131.2834898,
+    "tidal_lock_probability": 1.0,
+    "tidal_heating_wm2": 2.475102808764078e-08,
+    "max_relief_m": 562.0587309224954,
+    "archetype": "airless_rock",
+    "archetype_confidence": 0.353,
+    "capabilities": [
+      "impacts",
+      "solid_surface",
+      "tidally_locked",
+      "volatile_ice"
+    ],
+    "provenance": {
+      "surface_gravity_ms2": "derived",
+      "escape_velocity_kms": "derived",
+      "bulk_density_kgm3": "derived",
+      "equilibrium_temp_k": "derived",
+      "shoreline_ratio": "derived",
+      "tidal_lock_probability": "derived",
+      "tidal_heating_wm2": "derived",
+      "max_relief_m": "derived"
+    },
+    "notes": []
+  },
+  "provenance_map": {
+    "grid.elevation_range_m": "ai_inferred",
+    "pipeline.base.amplitude": "assumed",
+    "pipeline.base.beta": "ai_inferred",
+    "pipeline.base.frequency": "ai_inferred",
+    "pipeline.base.octaves": "ai_inferred",
+    "pipeline.basins.central_peak_threshold": "assumed",
+    "pipeline.basins.density": "ai_inferred",
+    "pipeline.basins.depth_scale": "assumed",
+    "pipeline.basins.ejecta_extent": "assumed",
+    "pipeline.basins.max_diameter_frac": "ai_inferred",
+    "pipeline.basins.min_diameter_frac": "assumed",
+    "pipeline.basins.rim_height": "assumed",
+    "pipeline.basins.size_exponent": "ai_inferred",
+    "pipeline.micro.amplitude": "ai_inferred",
+    "pipeline.micro.frequency": "ai_inferred",
+    "pipeline.micro.octaves": "assumed",
+    "pipeline.micro.slope_gated": "assumed",
+    "pipeline.talus.critical_slope": "ai_inferred",
+    "pipeline.talus.iterations": "ai_inferred",
+    "pipeline.talus.rate": "assumed"
+  },
+  "envelope_hash": "9f89cc6c850dde8c",
+  "revision": 1,
+  "supersedes": null,
+  "llm": {
+    "provider": "mock",
+    "model": "archetype-template",
+    "temperature": 0.0,
+    "prompt_hash": "4e904b5c742aaf9f",
+    "registry_version": "751d35b7bd0b",
+    "attempts": 1,
+    "repairs": [],
+    "rejected": [],
+    "fallback_used": false,
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "latency_s": 0.0
+  },
+  "content_hash": "f1ea3532e65da44ce69a66a605894d25",
+  "frozen_at": "2026-08-19T20:01:36Z"
+}

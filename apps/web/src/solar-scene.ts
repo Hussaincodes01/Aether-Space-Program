@@ -29,6 +29,7 @@ import {
   type SolarBody,
 } from "@aether/solar-system";
 import { attach, createFrame, createUniverseRoot, vec3, type Frame } from "@aether/coordinates";
+import { hasSolidSurface } from "@aether/terrain";
 import type { PlanetMeshResult } from "./planet-mesh.js";
 
 export type TerrainState = "placeholder" | "building" | "detailed";
@@ -127,7 +128,9 @@ export function isLandable(body: SolarBody): boolean {
     return false;
   }
 
-  // Everything else needs to be dense enough to be condensed rather than a puffball.
+  // Everything else is condensed matter and has ground. The floor only rules out things
+  // that are not solid at all -- water ice is 917 kg/m3, so a threshold of 1500 excluded
+  // Mimas, Iapetus, Miranda, Rhea and Deimos, every one of which you could stand on.
   return density >= MIN_LANDABLE_DENSITY_KG_M3;
 }
 
@@ -137,8 +140,11 @@ const EARTH_RADIUS_M = 6.3781e6;
 export const FLUID_ENVELOPE_RADII_EARTH = 2;
 export const FLUID_ENVELOPE_MAX_DENSITY = 2500;
 
-/** Matches the terrain package's solid-surface gate, so the two never disagree. */
-export const MIN_LANDABLE_DENSITY_KG_M3 = 1500;
+/**
+ * Matches `MIN_CONDENSED_DENSITY_KG_M3` in the terrain package, so the two never disagree.
+ * Below this there is no condensed matter; above it there is ground, ice included.
+ */
+export const MIN_LANDABLE_DENSITY_KG_M3 = 500;
 
 /**
  * How close the camera may get to a body's centre, in metres.
@@ -431,7 +437,9 @@ export function terrainContextFor(bodyId: string) {
   const body = getBody(bodyId);
   if (!body || body.kind === "star") return undefined;
   const context = toPlanetContext(body);
-  return context.bulkDensityKgM3 >= 1500 ? context : undefined;
+  // The terrain package owns this question. Re-deciding it here with a bare density number
+  // is how Mimas ended up with no terrain at all despite being solid water ice.
+  return hasSolidSurface(context) ? context : undefined;
 }
 
 /** Human-readable orbital period, for the UI. */

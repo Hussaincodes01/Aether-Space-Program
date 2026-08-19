@@ -1,0 +1,155 @@
+{
+  "schema_version": "1.2.0",
+  "engine_version": "aether-harness/0.4.0",
+  "planet_id": "Io",
+  "universe_seed": 20260819,
+  "archetype": "lava_world",
+  "grid": {
+    "body_radius_m": 1819572.2237029837,
+    "base_resolution_lat": 128,
+    "elevation_range_m": 2500.0,
+    "sea_level_quantile": null,
+    "reference_datum_m": 0.0
+  },
+  "pipeline": [
+    {
+      "id": "base",
+      "op": "noise.spectral_fbm",
+      "params": {
+        "amplitude": 1.0,
+        "beta": 2.2,
+        "frequency": 2.4,
+        "octaves": 6
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Baseline crust before melting collapses it.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "melt",
+      "op": "volc.magma_ocean",
+      "params": {
+        "cell_amplitude": 0.08,
+        "cell_frequency": 11.0,
+        "melt_fraction": 0.75
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Melt surface state derived from T_eq/tidal heating: relief collapses.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "shields",
+      "op": "volc.shield_volcano",
+      "params": {
+        "caldera_frac": 0.18,
+        "chain_alignment": 0.6,
+        "count": 22,
+        "flank_slope": 2.0,
+        "height": 0.5,
+        "radius_frac": 0.05
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Vigorous volcanism builds edifices faster than they relax.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "plains",
+      "op": "volc.flood_basalt",
+      "params": {
+        "coverage": 0.6,
+        "flatness": 0.95,
+        "margin_softness": 0.05,
+        "wrinkle_ridges": 0.05
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Continuous resurfacing keeps most of the surface as fresh plains.",
+      "channel_overrides": {}
+    }
+  ],
+  "derived": {
+    "surface_gravity_ms2": 1.7980881622831675,
+    "escape_velocity_kms": 2.559769233592292,
+    "bulk_density_kgm3": 3539.935708680215,
+    "equilibrium_temp_k": 104.10675833710515,
+    "insolation_earth": 0.03694121817367083,
+    "shoreline_ratio": 0.8980819213693481,
+    "tidal_lock_probability": 0.9999999999989,
+    "tidal_heating_wm2": 3.398628539182669,
+    "max_relief_m": 45000.0,
+    "archetype": "lava_world",
+    "archetype_confidence": 0.538,
+    "capabilities": [
+      "cryosphere",
+      "impacts",
+      "melt_surface",
+      "silicate_crust",
+      "solid_surface",
+      "tectonics",
+      "tidally_locked",
+      "volatile_ice",
+      "volcanism"
+    ],
+    "provenance": {
+      "surface_gravity_ms2": "derived",
+      "escape_velocity_kms": "derived",
+      "bulk_density_kgm3": "derived",
+      "equilibrium_temp_k": "derived",
+      "shoreline_ratio": "derived",
+      "tidal_lock_probability": "derived",
+      "tidal_heating_wm2": "derived",
+      "max_relief_m": "derived"
+    },
+    "notes": []
+  },
+  "provenance_map": {
+    "grid.elevation_range_m": "ai_inferred",
+    "pipeline.base.amplitude": "assumed",
+    "pipeline.base.beta": "ai_inferred",
+    "pipeline.base.frequency": "ai_inferred",
+    "pipeline.base.octaves": "ai_inferred",
+    "pipeline.melt.cell_amplitude": "assumed",
+    "pipeline.melt.cell_frequency": "ai_inferred",
+    "pipeline.melt.melt_fraction": "ai_inferred",
+    "pipeline.plains.coverage": "ai_inferred",
+    "pipeline.plains.flatness": "ai_inferred",
+    "pipeline.plains.margin_softness": "assumed",
+    "pipeline.plains.wrinkle_ridges": "assumed",
+    "pipeline.shields.caldera_frac": "assumed",
+    "pipeline.shields.chain_alignment": "assumed",
+    "pipeline.shields.count": "ai_inferred",
+    "pipeline.shields.flank_slope": "assumed",
+    "pipeline.shields.height": "ai_inferred",
+    "pipeline.shields.radius_frac": "ai_inferred"
+  },
+  "envelope_hash": "3ff703f019f593d6",
+  "revision": 1,
+  "supersedes": null,
+  "llm": {
+    "provider": "mock",
+    "model": "archetype-template",
+    "temperature": 0.0,
+    "prompt_hash": "3aacb71a48d6630c",
+    "registry_version": "751d35b7bd0b",
+    "attempts": 1,
+    "repairs": [],
+    "rejected": [],
+    "fallback_used": false,
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "latency_s": 0.0
+  },
+  "content_hash": "0ef27cb7e723c2cfae444539ef962f23",
+  "frozen_at": "2026-08-19T20:01:38Z"
+}

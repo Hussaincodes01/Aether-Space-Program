@@ -127,7 +127,9 @@ export function renderHud(data: HudData): void {
     // Never hidden. Every planet you have seen rendered is exaggerated; we say by how much.
     row(
       "terrain scale",
-      data.terrainExaggeration === 1 ? "1x (true)" : `${data.terrainExaggeration.toFixed(0)}x`,
+      data.terrainExaggeration === 1
+        ? "1x (true)"
+        : `${data.terrainExaggeration.toFixed(data.terrainExaggeration < 10 ? 1 : 0)}x`,
       data.terrainExaggeration === 1 ? "ok" : "warn",
     ),
     row(

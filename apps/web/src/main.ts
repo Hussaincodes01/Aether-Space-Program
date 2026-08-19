@@ -1007,7 +1007,10 @@ function frame(now: number): void {
     localPositionMagnitudeM: vecLength(camera.position),
     rebasedThisFrame: rebased,
     speculationFraction: Math.max(currentEnvelopeWidth, activeSystem?.speculation ?? 0),
-    terrainExaggeration: TERRAIN_EXAGGERATION,
+    // The exaggeration actually applied to the mesh on screen, which the builder caps against
+    // the body's radius. Reporting the requested 25x while showing 2.9x would be the HUD
+    // stating something untrue about the geometry the user is looking at.
+    terrainExaggeration: nearest?.entry.terrain?.exaggeration ?? TERRAIN_EXAGGERATION,
     reliefM: nearest?.entry.terrain
       ? nearest.entry.terrain.reliefM.maxM - nearest.entry.terrain.reliefM.minM
       : 0,

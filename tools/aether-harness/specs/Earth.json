@@ -1,0 +1,253 @@
+{
+  "schema_version": "1.2.0",
+  "engine_version": "aether-harness/0.4.0",
+  "planet_id": "Earth",
+  "universe_seed": 20260819,
+  "archetype": "temperate_terrestrial",
+  "grid": {
+    "body_radius_m": 6371000.0,
+    "base_resolution_lat": 128,
+    "elevation_range_m": 8000.0,
+    "sea_level_quantile": 0.68,
+    "reference_datum_m": 0.0
+  },
+  "pipeline": [
+    {
+      "id": "base",
+      "op": "noise.spectral_fbm",
+      "params": {
+        "amplitude": 1.0,
+        "beta": 2.1,
+        "frequency": 2.0,
+        "octaves": 8
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Earth-like spectral slope gives a realistic hypsometric baseline.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "plates",
+      "op": "tectonic.plates",
+      "params": {
+        "boundary_sharpness": 1.0,
+        "continental_fraction": 0.32,
+        "craton_relief": 0.35,
+        "plate_count": 13,
+        "uplift_gain": 1.0
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Silicate crust with active tectonics; 13 plates matches the Earth analogue.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "drivers",
+      "op": "noise.driver_fields",
+      "params": {
+        "erodibility_contrast": 0.5,
+        "erodibility_frequency": 4.0,
+        "erodibility_mean": 1.0,
+        "orographic_gain": 0.45,
+        "runoff_banding": 0.55,
+        "runoff_mean": 1.0,
+        "substellar_bias": 0.0
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Fluid cycle present, so precipitation banding and orographic forcing apply.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "belts",
+      "op": "tectonic.orogeny",
+      "params": {
+        "belt_width": 0.3,
+        "foreland_depth": 0.15,
+        "peak_height": 0.75,
+        "rift_depth": 0.3,
+        "roughness": 0.3
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Convergent margins become mountain belts with foreland basins.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "rivers",
+      "op": "erosion.stream_power",
+      "params": {
+        "deposition": 0.2,
+        "diffusivity": 0.09,
+        "dt": 0.02,
+        "erodibility": 0.400006769082946,
+        "fill_passes": 6,
+        "iterations": 45,
+        "m_exponent": 0.5,
+        "n_exponent": 1.0,
+        "uplift_rate": 0.6
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Detachment-limited incision produces dendritic networks and concave profiles.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "talus",
+      "op": "erosion.thermal_talus",
+      "params": {
+        "critical_slope": 0.6,
+        "iterations": 18,
+        "rate": 0.4
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Mass wasting caps slopes at the angle of repose for 1 g.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "hypso",
+      "op": "field.hypsometry_match",
+      "params": {
+        "continental_fraction": 0.3,
+        "separation": 0.55,
+        "strength": 0.8,
+        "target": "bimodal"
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Impose the continent/abyssal-plain bimodality that plate recycling creates.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "ocean",
+      "op": "hydro.sea_level",
+      "params": {
+        "abyssal_flattening": 0.45,
+        "coastal_smoothing": 0.3,
+        "quantile": 0.68,
+        "shelf_width": 0.08
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Hydrosphere fills to the observed land fraction.",
+      "channel_overrides": {}
+    }
+  ],
+  "derived": {
+    "surface_gravity_ms2": 9.80698191294477,
+    "escape_velocity_kms": 11.186189297404585,
+    "bulk_density_kgm3": 5514.186625195909,
+    "equilibrium_temp_k": 277.90092373736513,
+    "insolation_earth": 0.9999947800204364,
+    "shoreline_ratio": 0.06666180616053265,
+    "tidal_lock_probability": 0.00045658428214340413,
+    "tidal_heating_wm2": 4.954679565858298e-09,
+    "max_relief_m": 8849.550717325705,
+    "archetype": "temperate_terrestrial",
+    "archetype_confidence": 0.667,
+    "capabilities": [
+      "aeolian",
+      "atmosphere",
+      "fluid_cycle",
+      "impacts",
+      "silicate_crust",
+      "solid_surface",
+      "tectonics",
+      "volcanism"
+    ],
+    "provenance": {
+      "surface_gravity_ms2": "derived",
+      "escape_velocity_kms": "derived",
+      "bulk_density_kgm3": "derived",
+      "equilibrium_temp_k": "derived",
+      "shoreline_ratio": "derived",
+      "tidal_lock_probability": "derived",
+      "tidal_heating_wm2": "derived",
+      "max_relief_m": "derived"
+    },
+    "notes": []
+  },
+  "provenance_map": {
+    "grid.elevation_range_m": "ai_inferred",
+    "grid.sea_level_quantile": "ai_inferred",
+    "pipeline.base.amplitude": "assumed",
+    "pipeline.base.beta": "ai_inferred",
+    "pipeline.base.frequency": "ai_inferred",
+    "pipeline.base.octaves": "ai_inferred",
+    "pipeline.belts.belt_width": "ai_inferred",
+    "pipeline.belts.foreland_depth": "assumed",
+    "pipeline.belts.peak_height": "ai_inferred",
+    "pipeline.belts.rift_depth": "assumed",
+    "pipeline.belts.roughness": "assumed",
+    "pipeline.drivers.erodibility_contrast": "assumed",
+    "pipeline.drivers.erodibility_frequency": "assumed",
+    "pipeline.drivers.erodibility_mean": "assumed",
+    "pipeline.drivers.orographic_gain": "ai_inferred",
+    "pipeline.drivers.runoff_banding": "ai_inferred",
+    "pipeline.drivers.runoff_mean": "assumed",
+    "pipeline.drivers.substellar_bias": "assumed",
+    "pipeline.hypso.continental_fraction": "ai_inferred",
+    "pipeline.hypso.separation": "assumed",
+    "pipeline.hypso.strength": "assumed",
+    "pipeline.hypso.target": "ai_inferred",
+    "pipeline.ocean.abyssal_flattening": "ai_inferred",
+    "pipeline.ocean.coastal_smoothing": "assumed",
+    "pipeline.ocean.quantile": "ai_inferred",
+    "pipeline.ocean.shelf_width": "assumed",
+    "pipeline.plates.boundary_sharpness": "assumed",
+    "pipeline.plates.continental_fraction": "ai_inferred",
+    "pipeline.plates.craton_relief": "assumed",
+    "pipeline.plates.plate_count": "ai_inferred",
+    "pipeline.plates.uplift_gain": "assumed",
+    "pipeline.rivers.deposition": "assumed",
+    "pipeline.rivers.diffusivity": "ai_inferred",
+    "pipeline.rivers.dt": "assumed",
+    "pipeline.rivers.erodibility": "repaired",
+    "pipeline.rivers.fill_passes": "assumed",
+    "pipeline.rivers.iterations": "ai_inferred",
+    "pipeline.rivers.m_exponent": "assumed",
+    "pipeline.rivers.n_exponent": "assumed",
+    "pipeline.rivers.uplift_rate": "ai_inferred",
+    "pipeline.talus.critical_slope": "ai_inferred",
+    "pipeline.talus.iterations": "ai_inferred",
+    "pipeline.talus.rate": "assumed"
+  },
+  "envelope_hash": "284ddd0bbcb2c274",
+  "revision": 1,
+  "supersedes": null,
+  "llm": {
+    "provider": "mock",
+    "model": "archetype-template",
+    "temperature": 0.0,
+    "prompt_hash": "509b40cfe5a4b1dc",
+    "registry_version": "751d35b7bd0b",
+    "attempts": 1,
+    "repairs": [
+      "rivers.erodibility 0.45 -> 0.400007 (physics envelope)"
+    ],
+    "rejected": [],
+    "fallback_used": false,
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "latency_s": 0.0
+  },
+  "content_hash": "f7ad11efdae9c6b2cc75df8d2fe96da3",
+  "frozen_at": "2026-08-19T20:01:29Z"
+}

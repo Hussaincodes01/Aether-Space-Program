@@ -5,9 +5,7 @@
 import { defineOperator } from "../registry.js";
 import { frequencyForScale } from "../evaluate.js";
 import { fbm, warp } from "../noise.js";
-
-/** Below this bulk density the body is envelope-dominated and has no solid surface at all. */
-const MIN_SOLID_DENSITY_KG_M3 = 1500;
+import { hasSolidSurface } from "../types.js";
 
 export const referenceEllipsoid = defineOperator({
   id: "reference_ellipsoid",
@@ -26,7 +24,9 @@ export const referenceEllipsoid = defineOperator({
     },
   },
   gate: (ctx) => {
-    const solid = ctx.bulkDensityKgM3 >= MIN_SOLID_DENSITY_KG_M3;
+    // One rule, shared, so the datum and the operators that displace from it cannot
+    // disagree about whether there is a surface at all.
+    const solid = hasSolidSurface(ctx);
     return {
       admissible: solid,
       gatedBy: "bulk_density",
@@ -67,7 +67,7 @@ export const longWavelengthIsostasy = defineOperator({
     },
   },
   gate: (ctx) => {
-    const solid = ctx.bulkDensityKgM3 >= MIN_SOLID_DENSITY_KG_M3;
+    const solid = hasSolidSurface(ctx);
     // Maximum supportable topography scales as sigma/(rho*g), so relief goes inversely
     // with gravity. This is why Olympus Mons is on Mars and not on Earth. Normalised so
     // Earth sits at 0.5, leaving headroom in both directions rather than saturating.
@@ -118,7 +118,7 @@ export const microdetail = defineOperator({
     },
   },
   gate: (ctx) => ({
-    admissible: ctx.bulkDensityKgM3 >= MIN_SOLID_DENSITY_KG_M3,
+    admissible: hasSolidSurface(ctx),
     gatedBy: "bulk_density",
     reason: "Cosmetic detail layer; carries no scientific claim.",
     intensityRange: [0, 1],

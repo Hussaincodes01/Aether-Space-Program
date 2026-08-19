@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.2.0",
+  "engine_version": "aether-harness/0.4.0",
+  "planet_id": "Mars",
+  "universe_seed": 20260819,
+  "archetype": "cratered_relict",
+  "grid": {
+    "body_radius_m": 3385726.862231699,
+    "base_resolution_lat": 128,
+    "elevation_range_m": 7000.0,
+    "sea_level_quantile": null,
+    "reference_datum_m": 0.0
+  },
+  "pipeline": [
+    {
+      "id": "base",
+      "op": "noise.spectral_fbm",
+      "params": {
+        "amplitude": 1.0,
+        "beta": 1.9,
+        "frequency": 2.6,
+        "octaves": 8
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Little erosional smoothing on a geologically dead body.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "craters",
+      "op": "impact.crater_field",
+      "params": {
+        "central_peak_threshold": 0.04,
+        "density": 0.45,
+        "depth_scale": 0.15,
+        "ejecta_extent": 1.6,
+        "max_diameter_frac": 0.12,
+        "min_diameter_frac": 0.015,
+        "rim_height": 0.35,
+        "size_exponent": 2.1
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Long exposure age accumulates a dense crater population.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "maria",
+      "op": "volc.flood_basalt",
+      "params": {
+        "coverage": 0.28,
+        "flatness": 0.9,
+        "margin_softness": 0.05,
+        "wrinkle_ridges": 0.05
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Early flood volcanism resurfaces the impact lowlands.",
+      "channel_overrides": {}
+    },
+    {
+      "id": "talus",
+      "op": "erosion.thermal_talus",
+      "params": {
+        "critical_slope": 0.8,
+        "iterations": 12,
+        "rate": 0.4
+      },
+      "mask": null,
+      "weight": 1.0,
+      "enabled": true,
+      "seed_salt": 0,
+      "rationale": "Slope relaxation on old crater walls.",
+      "channel_overrides": {}
+    }
+  ],
+  "derived": {
+    "surface_gravity_ms2": 3.7311168288448666,
+    "escape_velocity_kms": 5.029861865229072,
+    "bulk_density_kgm3": 3947.6679882786893,
+    "equilibrium_temp_k": 229.54339358923008,
+    "insolation_earth": 0.43072013128348985,
+    "shoreline_ratio": 0.7023910007522035,
+    "tidal_lock_probability": 3.650024292096998e-05,
+    "tidal_heating_wm2": 2.2301175794855682e-10,
+    "max_relief_m": 27490.850070907396,
+    "archetype": "cratered_relict",
+    "archetype_confidence": 0.2,
+    "capabilities": [
+      "aeolian",
+      "atmosphere",
+      "impacts",
+      "silicate_crust",
+      "solid_surface",
+      "tectonics",
+      "volatile_ice",
+      "volcanism"
+    ],
+    "provenance": {
+      "surface_gravity_ms2": "derived",
+      "escape_velocity_kms": "derived",
+      "bulk_density_kgm3": "derived",
+      "equilibrium_temp_k": "derived",
+      "shoreline_ratio": "derived",
+      "tidal_lock_probability": "derived",
+      "tidal_heating_wm2": "derived",
+      "max_relief_m": "derived"
+    },
+    "notes": []
+  },
+  "provenance_map": {
+    "grid.elevation_range_m": "ai_inferred",
+    "pipeline.base.amplitude": "assumed",
+    "pipeline.base.beta": "ai_inferred",
+    "pipeline.base.frequency": "ai_inferred",
+    "pipeline.base.octaves": "ai_inferred",
+    "pipeline.craters.central_peak_threshold": "assumed",
+    "pipeline.craters.density": "repaired",
+    "pipeline.craters.depth_scale": "assumed",
+    "pipeline.craters.ejecta_extent": "assumed",
+    "pipeline.craters.max_diameter_frac": "assumed",
+    "pipeline.craters.min_diameter_frac": "assumed",
+    "pipeline.craters.rim_height": "assumed",
+    "pipeline.craters.size_exponent": "ai_inferred",
+    "pipeline.maria.coverage": "ai_inferred",
+    "pipeline.maria.flatness": "ai_inferred",
+    "pipeline.maria.margin_softness": "assumed",
+    "pipeline.maria.wrinkle_ridges": "assumed",
+    "pipeline.talus.critical_slope": "ai_inferred",
+    "pipeline.talus.iterations": "ai_inferred",
+    "pipeline.talus.rate": "assumed"
+  },
+  "envelope_hash": "ad9eacebaf84067c",
+  "revision": 1,
+  "supersedes": null,
+  "llm": {
+    "provider": "mock",
+    "model": "archetype-template",
+    "temperature": 0.0,
+    "prompt_hash": "8fc4104346477e83",
+    "registry_version": "751d35b7bd0b",
+    "attempts": 1,
+    "repairs": [
+      "craters.density 0.7 -> 0.45 (physics envelope)"
+    ],
+    "rejected": [],
+    "fallback_used": false,
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "latency_s": 0.0
+  },
+  "content_hash": "5487dc7be3762c7ea304f8291526653d",
+  "frozen_at": "2026-08-19T20:01:33Z"
+}

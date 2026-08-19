@@ -30,8 +30,36 @@ export interface TerrainData {
   colours: Float32Array;
   indices: Uint32Array;
   reliefM: { minM: number; maxM: number };
+  /**
+   * The exaggeration actually applied, which may be below the one requested.
+   * See `effectiveExaggeration`.
+   */
+  exaggeration: number;
   vertexCount: number;
   operators: string[];
+}
+
+/**
+ * Vertical exaggeration is capped as a fraction of the body's radius, not applied flat.
+ *
+ * A flat multiplier is benign on a large world and catastrophic on a small one. At 25x,
+ * Earth's 8.85 km of relief becomes 221 km against a 6371 km radius -- 3.5%, which reads as
+ * mountains. The same 25x on Europa turned 18.9 km into 474 km against a 1561 km radius:
+ * 30% of the body, and it rendered as a sea urchin rather than a moon.
+ *
+ * Capping the *displayed* relief instead gives every body the same visual treatment
+ * proportionally. Earth is unaffected, because 3.5% is where it already sat.
+ */
+export const MAX_DISPLAYED_RELIEF_FRACTION = 0.035;
+
+export function effectiveExaggeration(
+  requested: number,
+  radiusM: number,
+  reliefSpanM: number,
+): number {
+  if (!(reliefSpanM > 0) || !(radiusM > 0)) return requested;
+  const ceiling = (MAX_DISPLAYED_RELIEF_FRACTION * radiusM) / reliefSpanM;
+  return Math.max(1, Math.min(requested, ceiling));
 }
 
 // ── Icosphere ───────────────────────────────────────────────────────────────────────────
@@ -276,6 +304,9 @@ export function generateTerrainData(request: TerrainRequest): TerrainData {
   const reliefM = reliefRange(program, evalOptions, 1500);
   const span = Math.max(reliefM.maxM - reliefM.minM, 1);
 
+  // Bounded against the body's own size; a flat multiplier turns small moons into hedgehogs.
+  const exaggeration = effectiveExaggeration(terrainExaggeration, context.radiusM, span);
+
   const positions = new Float32Array(vertexCount * 3);
   const colours = new Float32Array(vertexCount * 3);
   const heights = new Float32Array(vertexCount);
@@ -288,7 +319,7 @@ export function generateTerrainData(request: TerrainRequest): TerrainData {
     const { heightM } = evaluateTerrain(program, { x: dx, y: dy, z: dz }, evalOptions);
     heights[i] = heightM;
 
-    const r = context.radiusM + heightM * terrainExaggeration;
+    const r = context.radiusM + heightM * exaggeration;
     positions[i * 3] = dx * r;
     positions[i * 3 + 1] = dy * r;
     positions[i * 3 + 2] = dz * r;
@@ -328,6 +359,7 @@ export function generateTerrainData(request: TerrainRequest): TerrainData {
     colours,
     indices,
     reliefM,
+    exaggeration,
     vertexCount,
     operators: program.operators.map((o) => o.op),
   };

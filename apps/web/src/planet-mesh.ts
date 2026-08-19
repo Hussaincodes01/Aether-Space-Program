@@ -54,7 +54,7 @@ function toRequest(options: PlanetMeshOptions): TerrainRequest {
   };
 }
 
-function toGeometry(data: TerrainData, exaggeration: number): PlanetMeshResult {
+function toGeometry(data: TerrainData, _requestedExaggeration: number): PlanetMeshResult {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(data.positions, 3));
   geometry.setAttribute("normal", new THREE.BufferAttribute(data.normals, 3));
@@ -65,7 +65,9 @@ function toGeometry(data: TerrainData, exaggeration: number): PlanetMeshResult {
   return {
     geometry,
     reliefM: data.reliefM,
-    exaggeration,
+    // The value actually applied, which the builder may have reduced to keep displayed
+    // relief a sane fraction of the body. Reporting the requested one would make the HUD lie.
+    exaggeration: data.exaggeration,
     vertexCount: data.vertexCount,
     operators: data.operators,
   };
