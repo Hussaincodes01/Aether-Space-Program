@@ -45,7 +45,16 @@ def masked(secret: str | None) -> str:
 def _post(url: str, payload: dict, headers: dict, timeout: float = 120.0) -> dict:
     req = urllib.request.Request(
         url, data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", **headers}, method="POST")
+        headers={
+            "Content-Type": "application/json",
+            # Cloudflare-fronted endpoints answer 403 with error 1010 -- "banned browser
+            # signature" -- to urllib's default agent string. OpenCode Zen is one of them,
+            # and without this every call to it fails before reaching the model.
+            "User-Agent": "aether-harness/0.4 (+https://github.com/Hussaincodes01/Aether-Space-Program)",
+            "Accept": "application/json",
+            **headers,
+        },
+        method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
@@ -143,8 +152,25 @@ class OpenAICompatProvider(Provider):
             body["response_format"] = {"type": "json_object"}
             body["messages"][0]["content"] = system + "\n\nRespond with a single JSON object only."
             d = _post(url, body, {"Authorization": f"Bearer {self.api_key}"}, self.timeout)
-        text = d["choices"][0]["message"]["content"]
+        choice = d["choices"][0]
+        text = choice["message"]["content"]
         u = d.get("usage", {})
+
+        # An empty body with a "length" finish is a reasoning model that spent the whole
+        # budget thinking and never got to the answer. `max_tokens` covers reasoning plus
+        # content on these, so the fix is a bigger budget, not a retry -- and saying which
+        # it was turns "no JSON object in response: ''" into something actionable.
+        if not (text or "").strip():
+            reasoning = choice["message"].get("reasoning_content") or ""
+            raise ProviderError(
+                f"empty response from {self.model}: finish_reason="
+                f"{choice.get('finish_reason')!r}, "
+                f"{u.get('completion_tokens', 0)} completion tokens, "
+                f"{len(reasoning)} characters of reasoning. "
+                + ("Raise max_tokens: the budget covers reasoning and answer together."
+                   if choice.get("finish_reason") == "length" else "")
+            )
+
         return Completion(_loads(text), u.get("prompt_tokens", 0),
                           u.get("completion_tokens", 0), time.perf_counter() - t0, text)
 
@@ -256,10 +282,48 @@ def _to_google_schema(schema: dict) -> dict:
     return conv(schema)
 
 
+class OpenCodeProvider(OpenAICompatProvider):
+    """OpenCode Zen.
+
+    OpenAI-compatible, so the parent does all the work; this only pins the base URL and
+    names a default model that costs nothing. The `-free` suffix is load-bearing -- Zen
+    resells billed models through the same endpoint, and an unattended catalogue build
+    should not be able to wander onto one.
+
+    Two things differ from OpenAI in practice:
+
+      * The endpoint is behind Cloudflare, which rejects urllib's default agent string.
+        Handled in `_post`.
+      * DeepSeek returns `reasoning_content` alongside `content`, and `max_tokens` covers
+        both. A budget sized for the answer alone gets spent on reasoning and returns an
+        empty string having consumed every token, so `complete_json` floors it.
+    """
+
+    name = "opencode"
+    default_model = "deepseek-v4-flash-free"
+
+    def __init__(self, model=None, **kw):
+        # `setdefault` is not enough: build_provider always passes base_url as an explicit
+        # keyword, so the key is present with value None and setdefault leaves it alone.
+        # That sent every call to api.openai.com and returned 401 with an OpenCode key.
+        if not kw.get("base_url"):
+            kw["base_url"] = "https://opencode.ai/zen/v1"
+        super().__init__(model, **kw)
+
+    def complete_json(self, system, user, schema, temperature=0.0, max_tokens=6000):
+        # Measured against the real operator catalog: a Europa spec produced 29,358
+        # characters of reasoning -- the whole 8,000-token budget -- and returned an empty
+        # string with finish_reason "length". The budget has to carry the reasoning and the
+        # answer, and for this prompt the reasoning alone is most of it.
+        return super().complete_json(system, user, schema, temperature,
+                                     max(max_tokens, 24000))
+
+
 PROVIDERS: dict[str, tuple[type[Provider], str | None]] = {
     "anthropic": (AnthropicProvider, "ANTHROPIC_API_KEY"),
     "openai": (OpenAICompatProvider, "OPENAI_API_KEY"),
     "openai_compat": (OpenAICompatProvider, "OPENAI_API_KEY"),
+    "opencode": (OpenCodeProvider, "OPENCODE_API_KEY"),
     "google": (GoogleProvider, "GOOGLE_API_KEY"),
     "ollama": (OllamaProvider, None),
     "mock": (MockProvider, None),

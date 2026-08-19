@@ -75,3 +75,45 @@ variation the upstream README already warns about. Not fixed, because fixing it 
 measuring an interior rather than choosing a constant.
 
 `_accumulate` remains an explicit Python loop and is the bottleneck above ~256 rows.
+
+## OpenCode Zen provider
+
+Registered as `opencode`, pointing at `https://opencode.ai/zen/v1` with `OPENCODE_API_KEY`.
+Default model `deepseek-v4-flash-free`; the `-free` suffix is load-bearing, since Zen resells
+billed models through the same endpoint and an unattended catalogue build should not be able
+to wander onto one.
+
+```bash
+cd tools/aether-harness
+export OPENCODE_API_KEY=...        # never commit; .opencode.key is gitignored
+python -m aether_harness.cli build \
+    --cards ../../packages/solar-system/solar-system-cards.json \
+    --provider opencode --ledger solar.ledger.json --outdir solar-out
+```
+
+Four things had to be fixed before a single call succeeded, each found by running it:
+
+1. **Cloudflare 1010.** `_post` used urllib with no `User-Agent`, and the endpoint answers
+   403 "banned browser signature" to urllib's default. Every call failed before reaching a
+   model. `requests` would have passed; urllib does not.
+
+2. **`base_url` silently ignored.** The provider set its default with `kw.setdefault`, but
+   `build_provider` always passes `base_url` as an explicit keyword, so the key was present
+   with value `None` and `setdefault` left it alone. Every request went to `api.openai.com`
+   and came back 401 with an OpenCode key in the message.
+
+3. **Reasoning eats the token budget.** DeepSeek returns `reasoning_content` next to
+   `content`, and `max_tokens` covers both. Against the real 26-operator catalog a Europa
+   spec produced **29,358 characters of reasoning** and returned an empty string with
+   `finish_reason: length`. The old error was `no JSON object in response: ''`, which says
+   nothing; it now reports the finish reason, the tokens spent and the reasoning length, and
+   the floor is 24,000 tokens.
+
+4. **Free-tier rate limits.** `HTTP 429 FreeUsageLimitError` after a handful of calls. A
+   32-body catalogue at ~8k+ reasoning tokens each does not fit the free tier in one pass.
+   Build incrementally -- the ledger makes a re-run resume rather than repeat, since an
+   already-frozen planet is a ledger hit and not a second model call.
+
+Throughout, the fallback behaved as designed: every failure above ended in
+`falling back to the deterministic archetype template` and a frozen spec. A universe was
+never lost, which is the property that makes an unattended build safe to leave running.
