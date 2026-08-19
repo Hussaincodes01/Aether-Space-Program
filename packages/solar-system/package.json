@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "export:cards": "node ../../node_modules/.pnpm/vite-node@2.1.9_@types+node@22.20.1/node_modules/vite-node/vite-node.mjs tools/export-cards.ts -- solar-system-cards.json"
   },
   "dependencies": {
     "@aether/terrain": "workspace:*",
