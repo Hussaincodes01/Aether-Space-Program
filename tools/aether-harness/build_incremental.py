@@ -89,8 +89,13 @@ def build_one(card: dict, rebuild: bool, args: argparse.Namespace) -> tuple[bool
     finally:
         one.unlink(missing_ok=True)
 
-    # "(FALLBACK)" on the frozen line is the harness saying the model did not author this.
-    return ("FALLBACK" not in output, output)
+    # Success needs positive evidence. Testing only for the absence of "(FALLBACK)" reports
+    # a win whenever the CLI dies before printing anything at all -- which it did, silently,
+    # for a whole TRAPPIST run. A spec is authored only if the harness said it froze one and
+    # did not mark it a fallback.
+    frozen = [ln for ln in output.splitlines() if "[frozen]" in ln]
+    authored = bool(frozen) and not any("FALLBACK" in ln for ln in frozen)
+    return (authored, output)
 
 
 def main() -> int:
@@ -137,14 +142,14 @@ def main() -> int:
 
         if ok:
             authored += 1
-            hashes = [ln for ln in output.splitlines() if "[frozen]" in ln]
-            print(f"  {name:<12} LLM  {hashes[0].split('->')[-1].strip() if hashes else ''}")
+            frozen = next(ln for ln in output.splitlines() if "[frozen]" in ln)
+            print(f"  {name:<14} LLM  {frozen.split('->')[-1].strip()}")
         else:
             reason = next(
                 (ln.strip() for ln in output.splitlines() if "provider error" in ln),
                 "fell back",
             )
-            print(f"  {name:<12} FALLBACK  {reason[:90]}")
+            print(f"  {name:<14} FALLBACK  {reason[:88]}")
 
         if args.limit and authored >= args.limit:
             print(f"\nstopping at --limit {args.limit}")

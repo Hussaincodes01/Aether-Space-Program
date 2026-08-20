@@ -12,6 +12,7 @@
 import {
   compileTerrainProgram,
   evaluateTerrain,
+  maxReliefM,
   reliefRange,
   type PlanetContext,
 } from "@aether/terrain";
@@ -301,7 +302,27 @@ export function generateTerrainData(request: TerrainRequest): TerrainData {
     substellarDir,
   };
 
-  const reliefM = reliefRange(program, evalOptions, 1500);
+  const rawRelief = reliefRange(program, evalOptions, 1500);
+  const rawSpan = Math.max(rawRelief.maxM - rawRelief.minM, 1);
+
+  /**
+   * Fit the generated relief inside what the body can physically carry.
+   *
+   * The operators work in absolute metres tuned at planet scale, so on a small body they
+   * overshoot badly: Phobos came out with 15.9 km of relief against an 11.3 km radius, and
+   * at true scale that displacement reaches past the centre and turns the moon inside out.
+   *
+   * Scaled rather than clamped. Clamping would flatten every peak to one height and destroy
+   * the morphology the operators just built; a uniform scale keeps the landscape and only
+   * changes how tall it is.
+   */
+  const ceilingM = maxReliefM(context);
+  const reliefScale = rawSpan > ceilingM ? ceilingM / rawSpan : 1;
+
+  const reliefM = {
+    minM: rawRelief.minM * reliefScale,
+    maxM: rawRelief.maxM * reliefScale,
+  };
   const span = Math.max(reliefM.maxM - reliefM.minM, 1);
 
   // Bounded against the body's own size; a flat multiplier turns small moons into hedgehogs.
@@ -317,9 +338,9 @@ export function generateTerrainData(request: TerrainRequest): TerrainData {
     const dz = dirs[i * 3 + 2]!;
 
     const { heightM } = evaluateTerrain(program, { x: dx, y: dy, z: dz }, evalOptions);
-    heights[i] = heightM;
+    heights[i] = heightM * reliefScale;
 
-    const r = context.radiusM + heightM * exaggeration;
+    const r = context.radiusM + heights[i]! * exaggeration;
     positions[i * 3] = dx * r;
     positions[i * 3 + 1] = dy * r;
     positions[i * 3 + 2] = dz * r;

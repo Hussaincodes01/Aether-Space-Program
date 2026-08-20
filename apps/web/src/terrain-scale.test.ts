@@ -11,6 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import { MAX_DISPLAYED_RELIEF_FRACTION, effectiveExaggeration } from "./terrain-data.js";
+import { maxReliefM } from "@aether/terrain";
 
 /** radius m, computed relief span m */
 const BODIES = {
@@ -85,5 +86,56 @@ describe("the cap behaves at the edges", () => {
     const big = effectiveExaggeration(25, 6.4e6, 10_000);
     const small = effectiveExaggeration(25, 1.5e6, 10_000);
     expect(small).toBeLessThan(big);
+  });
+});
+
+describe("relief never exceeds what the body can carry", () => {
+  // radius m, bulk density kg/m3, surface gravity m/s2
+  const ctx = (radiusM: number, bulkDensityKgM3: number, surfaceGravityMs2: number) =>
+    ({ radiusM, bulkDensityKgM3, surfaceGravityMs2 }) as never;
+
+  it("bounds Phobos to a few hundred metres, not several kilometres", () => {
+    // The bug: the generator produced 15.9 km of relief on an 11.27 km radius -- 141% of
+    // the body -- so at true scale the displacement reached past the centre and the moon
+    // rendered inside out.
+    const ceiling = maxReliefM(ctx(11_270, 1876, 0.0057));
+    expect(ceiling).toBeLessThan(600);
+    expect(ceiling).toBeGreaterThan(500);
+    expect(ceiling / 11_270).toBeLessThan(0.06);
+  });
+
+  it("agrees with the harness, which reaches 562 m for Phobos", () => {
+    expect(maxReliefM(ctx(11_270, 1876, 0.0057))).toBeCloseTo(563.5, 0);
+  });
+
+  it("leaves Earth on the strength limit, near Everest", () => {
+    // Big bodies are strength-limited, not size-limited, and must be untouched.
+    const ceiling = maxReliefM(ctx(6.3781e6, 5514, 9.80665));
+    expect(ceiling).toBeGreaterThan(8000);
+    expect(ceiling).toBeLessThan(9500);
+  });
+
+  it("leaves Mars able to carry Olympus Mons", () => {
+    // Olympus Mons is 22 km; the ceiling must not fall below it.
+    expect(maxReliefM(ctx(3.3895e6, 3934, 3.73))).toBeGreaterThan(22_000);
+  });
+
+  it("never returns a ceiling at or above the body's own radius", () => {
+    const bodies: ReadonlyArray<readonly [number, number, number]> = [
+      [11_270, 1876, 0.0057],
+      [6_200, 1471, 0.003],
+      [198_200, 1150, 0.064],
+      [1.5608e6, 3013, 1.32],
+      [6.3781e6, 5514, 9.80665],
+    ];
+    for (const [r, rho, g] of bodies) {
+      expect(maxReliefM(ctx(r, rho, g))).toBeLessThan(r);
+    }
+  });
+
+  it("is monotonic in radius for bodies in the size-limited regime", () => {
+    const small = maxReliefM(ctx(6_200, 1471, 0.003));
+    const large = maxReliefM(ctx(11_270, 1876, 0.0057));
+    expect(large).toBeGreaterThan(small);
   });
 });

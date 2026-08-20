@@ -59,3 +59,7 @@ tools/aether-harness/*.ledger.json
 tools/aether-harness/specs/
 tools/aether-harness/one-card.json
 tools/aether-harness/*-out/
+
+# TRAPPIST card export is regenerable.
+packages/catalog/trappist-cards.json
+tools/aether-harness/trappist4.json

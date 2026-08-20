@@ -131,6 +131,40 @@ export interface EvalContext {
   heightSoFarM: number;
 }
 
+/**
+ * The largest relief a body can physically carry, in metres.
+ *
+ * Two bounds, whichever is tighter.
+ *
+ * **Strength.** Topography is held up against its own weight, so the ceiling scales as
+ * 1/(rho*g), normalised to Earth's 8850 m. That alone is what the generator used, and it
+ * diverges as gravity falls: on Phobos it evaluates to 3,057 km.
+ *
+ * **Size.** A body cannot carry relief approaching its own radius and still be that body.
+ * This is the bound that was missing, and its absence was visible: the generator gave
+ * Phobos 15.9 km of relief on an 11.3 km radius -- 141% -- so at true scale the
+ * displacement pushed vertices through the centre and the moon rendered inside out.
+ *
+ * Five percent is generous against the real Solar System (Earth spans 0.31% of its radius,
+ * Mars 0.87%, the Moon 1.1%) and only binds on small bodies, which is exactly where the
+ * strength limit has stopped saying anything. It also puts this in agreement with the
+ * harness, which reaches 562 m for Phobos where this reaches 564 m.
+ */
+export function maxReliefM(context: PlanetContext): number {
+  const strengthLimitM =
+    8850 *
+    (EARTH_SURFACE_GRAVITY / Math.max(context.surfaceGravityMs2, 0.05)) *
+    Math.sqrt(EARTH_BULK_DENSITY / Math.max(context.bulkDensityKgM3, 1000));
+
+  return Math.min(strengthLimitM, RELIEF_RADIUS_FRACTION * context.radiusM);
+}
+
+const EARTH_SURFACE_GRAVITY = 9.80665;
+const EARTH_BULK_DENSITY = 5514;
+
+/** Relief may not exceed this fraction of a body's radius. See `maxReliefM`. */
+export const RELIEF_RADIUS_FRACTION = 0.05;
+
 export function hasSolidSurface(context: PlanetContext): boolean {
   if (context.bulkDensityKgM3 < MIN_CONDENSED_DENSITY_KG_M3) return false;
 

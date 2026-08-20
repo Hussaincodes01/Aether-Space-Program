@@ -200,7 +200,29 @@ def export(fs: FieldSet, spec: TerrainSpec, rep: RunReport, outdir: str) -> list
     return written
 
 
-def preview_png(fs: FieldSet, path: str) -> str | None:
+# Basalt does not melt until roughly this temperature. Below it, a lava field is rock.
+BASALT_SOLIDUS_K = 1200.0
+BASALT_LIQUIDUS_K = 1450.0
+STEFAN_BOLTZMANN = 5.670374419e-8
+
+
+def surface_temperature_k(equilibrium_temp_k: float, tidal_heating_wm2: float = 0.0) -> float:
+    """Radiative equilibrium including any tidal contribution.
+
+    Tidal heating is a surface flux, so it adds in the fourth power alongside insolation.
+    TRAPPIST-1 b receives 1,833 W/m2 of it -- five hundred times Io -- and still settles at
+    490 K, because radiating that away simply does not require a molten surface.
+    """
+    return float((equilibrium_temp_k**4 + max(tidal_heating_wm2, 0.0) / STEFAN_BOLTZMANN) ** 0.25)
+
+
+def preview_png(
+    fs: FieldSet,
+    path: str,
+    *,
+    equilibrium_temp_k: float | None = None,
+    tidal_heating_wm2: float = 0.0,
+) -> str | None:
     """Shaded relief + ocean/ice tint. Purely for eyeballing a spec."""
     try:
         from PIL import Image
@@ -227,8 +249,28 @@ def preview_png(fs: FieldSet, path: str) -> str | None:
         rgb = rgb * (1 - 0.85 * ice) + 0.85 * ice * 0.92
     if fs.has("lava"):
         lv = np.clip(fs.get("lava"), 0, 1)[..., None]
-        rgb = rgb * (1 - lv) + lv * np.concatenate(
-            [0.85 + 0 * lv, 0.25 + 0 * lv, 0.05 + 0 * lv], axis=-1)
+
+        # Lava glows only while it is above the solidus. The `lava` channel marks where
+        # volcanic rock is, not whether it is still molten, and painting all of it
+        # incandescent orange made TRAPPIST-1 e -- a 250 K cratered relict whose only
+        # volcanic operator is flood basalt -- look like it was covered in glowing seas.
+        # Flood basalts are solidified: the Deccan Traps and the lunar maria are dark, and
+        # darker than the crust around them, which is the point of the second branch here.
+        glow = 0.0
+        if equilibrium_temp_k is not None:
+            t_surf = surface_temperature_k(equilibrium_temp_k, tidal_heating_wm2)
+            glow = float(
+                np.clip(
+                    (t_surf - BASALT_SOLIDUS_K) / (BASALT_LIQUIDUS_K - BASALT_SOLIDUS_K),
+                    0.0,
+                    1.0,
+                )
+            )
+
+        molten = np.concatenate([0.95 + 0 * lv, 0.35 + 0 * lv, 0.06 + 0 * lv], axis=-1)
+        basalt = np.concatenate([0.13 + 0 * lv, 0.12 + 0 * lv, 0.11 + 0 * lv], axis=-1)
+        lava_rgb = basalt * (1 - glow) + molten * glow
+        rgb = rgb * (1 - lv) + lv * lava_rgb
 
     img = np.clip(rgb * shade[..., None] * 1.7, 0, 1)
     Image.fromarray((img * 255).astype(np.uint8)).save(path)

@@ -66,8 +66,15 @@ def cmd_build(a) -> int:
                 fs, rep = execute(res.spec, h.registry, resolution=a.res)
                 files = export(fs, res.spec, rep, a.outdir)
                 if a.preview:
-                    pv = preview_png(fs, os.path.join(
-                        a.outdir, f"{res.spec.planet_id.replace(' ', '_')}_preview.png"))
+                    pv = preview_png(
+                        fs,
+                        os.path.join(
+                            a.outdir,
+                            f"{res.spec.planet_id.replace(' ', '_')}_preview.png",
+                        ),
+                        equilibrium_temp_k=res.env.equilibrium_temp_k,
+                        tidal_heating_wm2=res.env.tidal_heating_wm2,
+                    )
                     if pv:
                         files.append(pv)
                 print("        " + "\n        ".join(files))
@@ -86,8 +93,13 @@ def cmd_render(a) -> int:
     fs, rep = execute(spec, reg, resolution=a.res)
     files = export(fs, spec, rep, a.outdir)
     if a.preview:
-        pv = preview_png(fs, os.path.join(a.outdir,
-                                          f"{spec.planet_id.replace(' ', '_')}_preview.png"))
+        derived = getattr(spec, "derived", None) or {}
+        pv = preview_png(
+            fs,
+            os.path.join(a.outdir, f"{spec.planet_id.replace(' ', '_')}_preview.png"),
+            equilibrium_temp_k=derived.get("equilibrium_temp_k"),
+            tidal_heating_wm2=derived.get("tidal_heating_wm2", 0.0),
+        )
         if pv:
             files.append(pv)
     print(json.dumps(rep.to_dict(), indent=2))
