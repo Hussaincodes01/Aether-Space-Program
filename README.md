@@ -69,6 +69,69 @@ uncertainty machinery are not four features — they are one mechanic.
 
 ---
 
+## One system, four worlds, generated
+
+These four surfaces were produced by the terrain harness from TRAPPIST-1's published
+measurements. Nothing about the geography is observed — no exoplanet surface ever has been —
+but nothing about it is arbitrary either. A model selects operators from a fixed catalog, and
+physics decides which operators it is even allowed to see.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/trappist/trappist-1b.png" alt="TRAPPIST-1 b, a dark resurfaced basaltic world"><br>
+<b>TRAPPIST-1 b</b> · <code>lava_world</code> · 398 K · 4.17 S⊕<br>
+<sub>1,833 W/m² of tidal heating — five hundred times Io. Magma ocean, shield volcanoes and
+flood basalt. Dark rather than glowing: radiating that flux away settles the surface at 490 K,
+far below the basalt solidus.</sub></td>
+<td width="50%"><img src="docs/assets/trappist/trappist-1e.png" alt="TRAPPIST-1 e, cratered highlands with dark basalt plains"><br>
+<b>TRAPPIST-1 e</b> · <code>cratered_relict</code> · 250 K · 0.65 S⊕<br>
+<sub>Bright cratered highlands cut by dark flood-basalt plains — the lunar maria pattern.
+The best-known habitable-zone candidate in the system.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/assets/trappist/trappist-1g.png" alt="TRAPPIST-1 g, an ice world"><br>
+<b>TRAPPIST-1 g</b> · <code>ice_world</code> · 172 K · 0.25 S⊕<br>
+<sub>Ice shell, glacial carving and a tidal fracture network over a cratered base.</sub></td>
+<td width="50%"><img src="docs/assets/trappist/trappist-1h.png" alt="TRAPPIST-1 h, the outermost ice world"><br>
+<b>TRAPPIST-1 h</b> · <code>ice_world</code> · 149 K · 0.14 S⊕<br>
+<sub>The outermost planet, and the coldest. Hypsometry matched to an icy-satellite reference.</sub></td>
+</tr>
+</table>
+
+**The archetypes were not assigned by hand.** They fall out of the measured numbers. All four
+planets orbit the same 2566 K dwarf at the same age and the same distance from us, so the only
+thing separating a lava world from an ice world here is where it sits: 4.17 down to 0.14 times
+Earth's illumination. Insolation is derived from TRAPPIST-1's own measured luminosity —
+5.55 × 10⁻⁴ L☉ — because assuming a Sun-like host would overstate it a thousandfold and turn
+every one of these into a lava world.
+
+**What the model may and may not do.** It picks operators and their parameters from a
+registry. It cannot invent a process: rivers are not discouraged on an airless rock, the
+operator is absent from the catalog, absent from the JSON schema, and rejected by the
+validator if it appears anyway. Parameters outside a physically admissible range are clamped
+and the correction is recorded. Every value carries `measured`, `derived`, `assumed`,
+`ai_inferred` or `repaired`, so you can always ask which of those a given number was.
+
+Specs are frozen and content-addressed, so the same planet renders the same way every time —
+asking twice is a ledger hit, not a second model call.
+
+```bash
+# The cards are generated from the seed data, so they are built rather than committed.
+pnpm --filter @aether/catalog run export:trappist
+
+cd tools/aether-harness
+export OPENCODE_API_KEY=...        # any OpenAI-compatible provider works
+python build_incremental.py --cards ../../packages/catalog/trappist-cards.json
+```
+
+The Solar System runs through the identical path, and that is the point: it is the only place
+with ground truth, so it is where the generator can be shown to be wrong. It currently gets
+Mercury and the Moon as airless rock, Venus as a greenhouse at 251 K, Earth capped at 8,850 m
+of relief — which is Everest — Mars as a cratered relict, all four giants as volatile
+envelopes, and Io as a lava world.
+
+---
+
 ## Missions as evidence, not filters
 
 <img src="docs/assets/mission-timeline.svg" alt="Timeline of exoplanet missions from 1990 to 2045" width="100%">
