@@ -16,6 +16,7 @@ import {
   MIN_EXPOSURE,
   adaptedExposure,
   insolationWattsPerM2,
+  planLighting,
   relativeInsolation,
   versusFullMoon,
 } from "./exposure.js";
@@ -128,5 +129,51 @@ describe("the justification holds up", () => {
   it("uses a full-moon reference in the right ballpark", () => {
     expect(FULL_MOON_W_M2).toBeGreaterThan(1e-4);
     expect(FULL_MOON_W_M2).toBeLessThan(1e-2);
+  });
+});
+
+describe("which star lights the scene", () => {
+  /** TRAPPIST-1 e, and a host luminosity from the NASA Exoplanet Archive. */
+  const TRAPPIST_1E = { distanceFromStarM: 0.02925 * AU, luminositySun: 0.000553 };
+
+  /**
+   * What the Solar System side of the calculation sees from TRAPPIST-1: the nearest Solar
+   * System body is an outer one, here at 93 AU. The old readout reported this.
+   */
+  const FAR_SOLAR_BODY_M = 93 * AU;
+
+  it("uses the Sun, and only the Sun, inside the Solar System", () => {
+    const plan = planLighting(AU, null);
+    expect(plan.sunEnabled).toBe(true);
+    expect(plan.sunIntensity).toBe(adaptedExposure(AU));
+    expect(plan.hostIntensity).toBe(0);
+    expect(plan.source).toBe("sun");
+    expect(plan.insolationWm2).toBeCloseTo(1361, 0);
+  });
+
+  it("switches the Sun off in another star system", () => {
+    // Neither light falls off with distance, so a Sun left on would light TRAPPIST-1's night
+    // sides from forty light-years away.
+    const plan = planLighting(FAR_SOLAR_BODY_M, TRAPPIST_1E);
+    expect(plan.sunEnabled).toBe(false);
+    expect(plan.sunIntensity).toBe(0);
+    expect(plan.hostIntensity).toBeGreaterThanOrEqual(MIN_EXPOSURE);
+  });
+
+  it("reports the host star's insolation, not a Solar System body's", () => {
+    const plan = planLighting(FAR_SOLAR_BODY_M, TRAPPIST_1E);
+    expect(plan.source).toBe("host");
+    // 0.65 of Earth's, which is the figure the catalogue derives for TRAPPIST-1 e.
+    expect(plan.insolationWm2 / 1361).toBeCloseTo(0.646, 2);
+    expect(plan.insolationWm2).not.toBeCloseTo(insolationWattsPerM2(FAR_SOLAR_BODY_M), 0);
+    expect(plan.versusFullMoon).toBeCloseTo(plan.insolationWm2 / FULL_MOON_W_M2, 6);
+  });
+
+  it("says unknown, rather than assuming a Sun, when the host luminosity is unmeasured", () => {
+    const plan = planLighting(FAR_SOLAR_BODY_M, { ...TRAPPIST_1E, luminositySun: NaN });
+    expect(plan.insolationWm2).toBeNaN();
+    expect(plan.versusFullMoon).toBeNaN();
+    // The world is still drawn: exposure is a viewing transform and is allowed to assume.
+    expect(plan.hostIntensity).toBeGreaterThanOrEqual(MIN_EXPOSURE);
   });
 });

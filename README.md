@@ -296,6 +296,7 @@ corepack enable    # pnpm at the exact version in packageManager
 | `pnpm test`         | Vitest across every package and the client             |
 | `pnpm build`        | Build every package **and** the web client             |
 | `pnpm build:web`    | Client only                                            |
+| `pnpm test:browser` | Smoke-test the built client in headless Chromium       |
 
 **Controls:** `W A S D` move · `R` / `F` up and down · `Shift` boost · mouse wheel throttle ·
 `Esc` release the mouse.
@@ -337,8 +338,9 @@ credibility from whether Mars looks like Mars.
 
 ## Status
 
-Everything below is in the repository, tested, and building. **459 tests** across twelve
-packages; `pnpm check` runs lint, typecheck, tests and the full build.
+Everything below is in the repository, tested, and building. **555 tests** across twelve
+packages, plus a browser smoke test in CI; `pnpm check` runs lint, typecheck, tests and the
+full build.
 
 ### The pipeline is connected end to end
 
@@ -391,7 +393,7 @@ These are real and stated rather than buried:
 | **The typed catalog is three systems** | The 4,722-system map is separate and shallower: names, distances, positions. Only catalog systems have a full interrogable model                                                                                                                                                                   |
 | **One inference prior**                | Chen & Kipping mass-radius. Enough for Proxima b; not a full inference layer                                                                                                                                                                                                                       |
 | **No LLM composer yet**                | The containment boundary is built and tested. Nothing is plugged into it                                                                                                                                                                                                                           |
-| **No browser-based screenshots in CI** | Scene assembly is tested headlessly (frame parenting, ring ownership, body counts) but pixels are not                                                                                                                                                                                              |
+| **Browser checks cover two stops**     | CI drives the built client in headless Chromium with software WebGL: launch at Earth, then arrival at TRAPPIST-1, checking for a lit frame, the right light source, the starlight readout and f32 precision. No surface descent yet, and software rendering says nothing about real frame rates    |
 | **Terrain is uncalibrated**            | The gates reproduce the Solar System qualitatively. Nothing yet scores generated terrain against real Mars or Moon maps                                                                                                                                                                            |
 
 ### Further reading

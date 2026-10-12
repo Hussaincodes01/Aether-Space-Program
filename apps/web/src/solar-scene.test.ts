@@ -19,6 +19,7 @@ import { buildSolarScene, collisionRadiusM, isLandable } from "./solar-scene.js"
 import { createStarfield } from "./starfield.js";
 import { createDeepSkyLayer } from "./deepsky-layer.js";
 import { createExoplanetLayer } from "./exoplanet-layer.js";
+import { DISCARD_OFFSCREEN_POINT } from "./point-sprite.js";
 
 const scene = buildSolarScene(0);
 
@@ -152,6 +153,18 @@ describe("the sky cannot draw through a planet", () => {
     expect(shader.vertexShader).toContain("logdepthbuf_vertex");
     expect(shader.fragmentShader).toContain("logdepthbuf_pars_fragment");
     expect(shader.fragmentShader).toContain("logdepthbuf_fragment");
+  });
+
+  it.each(layers)("%s discards points centred off screen", (_name, points) => {
+    // SwiftShader crashes the GPU process on a sprite centred just outside the viewport;
+    // one galaxy sat there on arrival at TRAPPIST-1 and the canvas never came back. The
+    // discard has to follow the write to gl_Position and precede log depth, which reads it.
+    const shader = (points.material as THREE.ShaderMaterial).vertexShader;
+    const written = shader.indexOf("gl_Position = projectionMatrix");
+    const discarded = shader.indexOf(DISCARD_OFFSCREEN_POINT);
+    const logDepth = shader.indexOf("#include <logdepthbuf_vertex>");
+    expect(discarded).toBeGreaterThan(written);
+    expect(logDepth).toBeGreaterThan(discarded);
   });
 });
 

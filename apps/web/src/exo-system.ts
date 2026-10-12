@@ -162,6 +162,15 @@ function terrainContext(resolved: ResolvedPlanet, teqK: number): PlanetContext |
   };
 }
 
+/**
+ * Build a system with every planet already on its orbit at `timeS`.
+ *
+ * Placement happens here rather than being left to the render loop, because the render loop
+ * only advances orbits while motion is running. With motion frozen, the planets were never
+ * placed at all: every frame starts at its parent's origin, so all seven TRAPPIST-1 planets
+ * sat at the centre of their star, hidden inside it. A system is valid the moment it exists,
+ * exactly as `buildSolarScene` places the Solar System at its start time.
+ */
 export function buildExoSystem(
   index: number,
   systems: SystemCatalog,
@@ -169,6 +178,7 @@ export function buildExoSystem(
   names: CatalogNames,
   universe: Frame,
   scene: THREE.Scene,
+  timeS: number,
 ): ExoSystem {
   const name = names.systems[index] ?? `system-${index}`;
 
@@ -332,7 +342,7 @@ export function buildExoSystem(
     detach(systemFrame);
   };
 
-  return {
+  const system: ExoSystem = {
     index,
     name,
     distancePc: systems.distancesPc[index]!,
@@ -346,6 +356,9 @@ export function buildExoSystem(
     speculation: bodies.length > 0 ? speculationTotal / bodies.length : 1,
     dispose,
   };
+
+  updateExoSystem(system, timeS);
+  return system;
 }
 
 /** Advance every planet along its orbit. */

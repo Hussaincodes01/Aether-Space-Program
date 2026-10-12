@@ -25,6 +25,7 @@ import {
   type DeepSkyCatalog,
   type NamedObject,
 } from "@aether/deepsky";
+import { DISCARD_OFFSCREEN_POINT } from "./point-sprite.js";
 
 import catalogUrl from "@aether/deepsky/data/deepsky.bin?url";
 import namesUrl from "@aether/deepsky/data/deepsky-names.json?url";
@@ -115,6 +116,7 @@ function createMaterial(): THREE.ShaderMaterial {
         vColour = color;
         gl_PointSize = size;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        ${DISCARD_OFFSCREEN_POINT}
         #include <logdepthbuf_vertex>
       }
     `,

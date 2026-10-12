@@ -57,6 +57,24 @@ jobs:
       - name: Build client explicitly
         run: pnpm --filter @aether/web run build
 
+      # Unit tests cannot see a blank canvas, a lost WebGL context or a planet parked inside
+      # its own star, and each of those shipped past every step above. This drives the built
+      # client in headless Chromium with software WebGL. See apps/web/e2e/smoke.mjs.
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser smoke test
+        run: pnpm run test:browser
+
+      # The rendered canvas at each stop, so a red run can be looked at rather than guessed at.
+      - name: Upload smoke-test frames
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-frames
+          path: apps/web/e2e/output/
+          if-no-files-found: ignore
+
   # Posts a build result to Discord after every push to main.
   #
   # Requires a repository secret named DISCORD_WEBHOOK. Without it this job is a no-op

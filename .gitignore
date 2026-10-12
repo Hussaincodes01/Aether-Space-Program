@@ -63,3 +63,6 @@ tools/aether-harness/*-out/
 # TRAPPIST card export is regenerable.
 packages/catalog/trappist-cards.json
 tools/aether-harness/trappist4.json
+
+# Frames written by the browser smoke test.
+apps/web/e2e/output/

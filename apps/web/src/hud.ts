@@ -29,10 +29,15 @@ export function formatSpeed(metresPerSecond: number): string {
 }
 
 export interface HudData {
-  /** True insolation at the nearest body, W/m^2. Physics, not the display exposure. */
+  /**
+   * True insolation at the nearest body, W/m^2. Physics, not the display exposure. NaN when
+   * the star's luminosity has never been measured, and shown as unknown.
+   */
   insolationWm2?: number;
   /** How many times a full moon on Earth. The "can you see anything" number. */
   insolationVsFullMoon?: number;
+  /** Whose light the insolation rows describe: the Sun, or another system's host star. */
+  insolationSource?: "sun" | "host";
   /** Body name while the camera is resting on its surface, else null. */
   groundedOn?: string | null;
   frameId: string;
@@ -103,17 +108,27 @@ export function renderHud(data: HudData): void {
     row("to Sun", formatDistance(data.distanceToStarM)),
     // The real illumination, always. The renderer compresses four decades of it into about
     // 6.4:1 so the outer system is visible at all, and this row is what keeps that a stated
-    // viewing transform rather than a quiet edit to the data.
+    // viewing transform rather than a quiet edit to the data. It is named for the star it
+    // describes: in another system, "sunlight" would read as the Sun's.
     data.insolationWm2 !== undefined
       ? row(
-          "sunlight",
-          data.insolationWm2 >= 1
-            ? `${data.insolationWm2.toFixed(1)} W/m²`
-            : `${data.insolationWm2.toFixed(3)} W/m²`,
+          data.insolationSource === "host" ? "starlight" : "sunlight",
+          !Number.isFinite(data.insolationWm2)
+            ? "unknown"
+            : data.insolationWm2 >= 1
+              ? `${data.insolationWm2.toFixed(1)} W/m²`
+              : `${data.insolationWm2.toFixed(3)} W/m²`,
+          Number.isFinite(data.insolationWm2) ? "v" : "warn",
         )
       : "",
     data.insolationVsFullMoon !== undefined
-      ? row("vs full moon", `${Math.round(data.insolationVsFullMoon).toLocaleString()}x`, "ok")
+      ? row(
+          "vs full moon",
+          Number.isFinite(data.insolationVsFullMoon)
+            ? `${Math.round(data.insolationVsFullMoon).toLocaleString()}x`
+            : "unknown",
+          Number.isFinite(data.insolationVsFullMoon) ? "ok" : "warn",
+        )
       : "",
     row("throttle", formatSpeed(data.throttle)),
     row(

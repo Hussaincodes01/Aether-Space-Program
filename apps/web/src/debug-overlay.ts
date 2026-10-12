@@ -31,6 +31,13 @@ export interface DebugSample {
   /** Active depth partition index, where partitioned rendering is on. */
   partition: number | null;
   fps: number;
+  /**
+   * Which star is lighting the scene. Neither light falls off with distance, so the wrong
+   * one left on lights a whole system from the wrong direction and nothing on screen says so.
+   */
+  light?: string;
+  /** Body whose atmosphere shell is attached, or "none". */
+  atmosphere?: string;
 }
 
 export interface DebugOverlay {
@@ -85,6 +92,8 @@ export function createDebugOverlay(): DebugOverlay {
         ${row("depth", s.depthStrategy)}
         ${row("partition", s.partition === null ? "n/a" : String(s.partition))}
         ${row("fps", s.fps.toFixed(0))}
+        ${s.light !== undefined ? row("light", s.light) : ""}
+        ${s.atmosphere !== undefined ? row("atmosphere", s.atmosphere) : ""}
         ${
           overLimit
             ? `<p class="pv-note pv-warn">Camera-relative offsets exceed ${format(

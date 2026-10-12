@@ -69,7 +69,7 @@ import { buildPlanetModel, type PlanetModel } from "@aether/catalog";
 import { createDebugOverlay } from "./debug-overlay.js";
 import { createDock } from "./panel-dock.js";
 import { desaturate, speculationStyle } from "./speculation.js";
-import { adaptedExposure, insolationWattsPerM2, versusFullMoon } from "./exposure.js";
+import { planLighting, type LitWorld } from "./exposure.js";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
@@ -440,6 +440,7 @@ function travelTo(systemIndex: number): void {
     names,
     scene.universe,
     scene.three,
+    scene.timeS,
   );
 
   // Arrive a few orbital radii out from the innermost planet, so the system reads as a
@@ -617,7 +618,6 @@ function requestTerrain(entry: SceneBody): void {
     })
     .then((result) => {
       attachTerrain(entry, result);
-      attachAtmosphere(entry);
     })
     .catch((error: unknown) => {
       // A failed build leaves the placeholder in place, which is still a valid world.
@@ -632,7 +632,10 @@ function requestTerrain(entry: SceneBody): void {
 function attachAtmosphere(entry: SceneBody): void {
   detachAtmosphere();
   const body = entry.data;
-  if (body.surfacePressurePa <= 0) return;
+  // The giants list 1 bar because that is the reference level their radius is quoted at,
+  // not a surface. Their H2/He envelope is not a composition modelled below, and drawing an
+  // N2 sky over Jupiter would be inventing one.
+  if (body.surfacePressurePa <= 0 || !isLandable(body)) return;
 
   // Mean molecular weight is an assumption for every body except the few with measured
   // composition, and the sky colour it produces inherits that uncertainty.
@@ -666,6 +669,28 @@ function detachAtmosphere(): void {
   atmosphere.material.dispose();
   atmosphere = null;
   atmosphereBodyId = null;
+}
+
+/**
+ * Keep an atmosphere on whichever world the camera is close to.
+ *
+ * The shell used to be attached only when generated terrain arrived, and terrain is
+ * deliberately never generated for worlds with a real surface map -- so Earth, Venus and
+ * Mars, the three best-measured atmospheres there are, never drew one. The shell depends on
+ * measured pressure, temperature and gravity, not on terrain, so it now follows proximity
+ * alone, with the same enter/exit hysteresis terrain uses.
+ */
+function updateAtmosphere(nearest: { entry: SceneBody; altitudeM: number } | undefined): void {
+  const id = activeSystem || !nearest ? null : nearest.entry.data.id;
+  const radii = nearest ? nearest.altitudeM / nearest.entry.data.radiusM : Infinity;
+
+  // Kept out to the exit radius, so hovering at the boundary cannot rebuild it every frame.
+  if (atmosphereBodyId !== null && atmosphereBodyId === id && radii <= TERRAIN_EXIT_RADII) {
+    return;
+  }
+
+  detachAtmosphere();
+  if (id !== null && nearest && radii < TERRAIN_ENTER_RADII) attachAtmosphere(nearest.entry);
 }
 
 /** RingGeometry lies in the XY plane; the equatorial plane is XZ. */
@@ -812,6 +837,8 @@ function frame(now: number): void {
   // Exoplanet bodies, resolved camera-relative exactly like Solar System ones.
   let exoAltitudeM = Infinity;
   let exoNearest: ExoPlanetBody | null = null;
+  /** Set while the camera is in another star system: the world its star is lighting. */
+  let host: LitWorld | null = null;
 
   if (activeSystem) {
     const starRel = cameraRelative(camera, activeSystem.starFrame);
@@ -831,21 +858,20 @@ function frame(now: number): void {
     }
 
     /**
-     * Adaptive exposure for the host star, computed once the nearest planet is known.
+     * The world being lit is the nearest planet, at its actual distance from its own star.
      *
-     * The old expression was `distance^2 * 1e-6` -- the inverse square law inverted, so a
-     * planet further from its star rendered brighter. Luminosity genuinely matters here too:
-     * TRAPPIST-1 is 0.00052 L_sun, its planets orbit at 0.01-0.06 AU, and they still receive
-     * roughly Earth's illumination. Assuming a Sun-like host would render them hundreds of
-     * times too bright.
+     * Luminosity genuinely matters here: TRAPPIST-1 is 0.00055 L_sun, its planets orbit at
+     * 0.01-0.06 AU, and they still receive roughly Earth's illumination. Assuming a Sun-like
+     * host would render them hundreds of times too bright. `planLighting` below turns this
+     * into both the exposure and the readout.
      */
-    const luminosity = Number.isFinite(activeSystem.starLuminositySun)
-      ? activeSystem.starLuminositySun
-      : 1;
-    const exoLitDistanceM =
-      (exoNearest as ExoPlanetBody | null)?.elements.semiMajorAxisM ??
-      Math.max(starDistance, activeSystem.starRadiusM * 10);
-    activeSystem.starLight.intensity = adaptedExposure(exoLitDistanceM, luminosity);
+    const lit = exoNearest as ExoPlanetBody | null;
+    host = {
+      distanceFromStarM: lit
+        ? lit.mesh.position.distanceTo(activeSystem.starMesh.position)
+        : Math.max(starDistance, activeSystem.starRadiusM * 10),
+      luminositySun: activeSystem.starLuminositySun,
+    };
   }
 
   const nearest = nearestBody(scene, distances);
@@ -910,9 +936,9 @@ function frame(now: number): void {
     const distance = distances.get(entry.data.id) ?? Infinity;
     if ((distance - entry.data.radiusM) / entry.data.radiusM > TERRAIN_EXIT_RADII) {
       releaseTerrain(entry);
-      if (atmosphereBodyId === entry.data.id) detachAtmosphere();
     }
   }
+  updateAtmosphere(nearest);
 
   /**
    * Solid ground.
@@ -964,13 +990,19 @@ function frame(now: number): void {
    * `adaptedExposure` compresses four decades of real illumination into about 6.4:1 while
    * keeping the ordering intact. The unmodified physics is still reported in the HUD, so
    * the compression is a stated viewing transform rather than a quiet edit to the data.
+   *
+   * In another star system the Sun is switched off and the host star does the lighting;
+   * `planLighting` owns that decision so the light and the readout cannot disagree.
    */
   const sunMesh = scene.bodies.get("sun")!.mesh;
   const litBody = nearestEntry ?? earthEntry;
   const litHelioDistanceM = litBody.mesh.position.distanceTo(sunMesh.position);
+  const lighting = planLighting(litHelioDistanceM, host);
 
   scene.sunLight.position.copy(sunRel);
-  scene.sunLight.intensity = adaptedExposure(litHelioDistanceM);
+  scene.sunLight.visible = lighting.sunEnabled;
+  scene.sunLight.intensity = lighting.sunIntensity;
+  if (activeSystem) activeSystem.starLight.intensity = lighting.hostIntensity;
 
   // Star positions are stored relative to the Sun, so the whole field rides with it.
   starfield.update(sunRel);
@@ -978,18 +1010,19 @@ function frame(now: number): void {
   exoplanets.update(sunRel);
 
   if (atmosphere && atmosphereBodyId) {
-    const host = scene.bodies.get(atmosphereBodyId)!;
-    atmosphere.mesh.position.copy(host.mesh.position);
-    atmosphere.setPlanetCentre(host.mesh.position);
-    atmosphere.setSunDirection(new THREE.Vector3().subVectors(sunRel, host.mesh.position));
+    const world = scene.bodies.get(atmosphereBodyId)!;
+    atmosphere.mesh.position.copy(world.mesh.position);
+    atmosphere.setPlanetCentre(world.mesh.position);
+    atmosphere.setSunDirection(new THREE.Vector3().subVectors(sunRel, world.mesh.position));
   }
 
   renderScene();
 
   renderHud({
     groundedOn: grounded,
-    insolationWm2: insolationWattsPerM2(litHelioDistanceM),
-    insolationVsFullMoon: versusFullMoon(litHelioDistanceM),
+    insolationWm2: lighting.insolationWm2,
+    insolationVsFullMoon: lighting.versusFullMoon,
+    insolationSource: lighting.source,
     frameId: camera.frame.id,
     frameDepth: frameDepth(camera.frame),
     altitudeM,
@@ -1037,6 +1070,10 @@ function frame(now: number): void {
     depthStrategy,
     partition: depthPartitions.length ? depthPartitions.length - 1 : null,
     fps: smoothedFps,
+    light: lighting.sunEnabled ? "Sun" : `${activeSystem?.name ?? "host star"} (Sun off)`,
+    atmosphere: atmosphereBodyId
+      ? (scene.bodies.get(atmosphereBodyId)?.data.name ?? atmosphereBodyId)
+      : "none",
   });
 
   requestAnimationFrame(frame);

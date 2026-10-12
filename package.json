@@ -15,6 +15,7 @@
     "build:web": "pnpm --filter @aether/web run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
+    "test:browser": "pnpm --filter @aether/web run test:browser",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

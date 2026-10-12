@@ -101,3 +101,69 @@ export function adaptedExposure(distanceFromStarM: number, luminosityRelativeSun
   const adapted = EXPOSURE_GAIN * Math.pow(Math.max(relative, 1e-12), ADAPTATION_EXPONENT);
   return Math.min(Math.max(adapted, MIN_EXPOSURE), MAX_EXPOSURE);
 }
+
+/** A world in another system, for lighting: its distance from its star, and that star's output. */
+export interface LitWorld {
+  /** Distance from the world to its star, metres. */
+  distanceFromStarM: number;
+  /** Host luminosity in solar units. NaN when the catalogue has no measurement. */
+  luminositySun: number;
+}
+
+export interface LightingPlan {
+  /** The Sun's light is on only while the camera is in the Solar System. */
+  sunEnabled: boolean;
+  /** Render intensity for the Sun's light; zero when it is off. */
+  sunIntensity: number;
+  /** Render intensity for another system's host star; zero in the Solar System. */
+  hostIntensity: number;
+  /** True insolation at the world in view, W/m^2. NaN when the host luminosity is unknown. */
+  insolationWm2: number;
+  /** The same as a multiple of full moonlight on Earth. NaN when unknown. */
+  versusFullMoon: number;
+  /** Which star the readout describes. */
+  source: "sun" | "host";
+}
+
+/**
+ * Which star lights the scene, how strongly, and what the HUD reports about it.
+ *
+ * Both lights are point lights with no distance falloff -- adaptive exposure replaces the
+ * inverse square on purpose -- so neither ever fades out by itself. The Sun's light used to
+ * stay on in other systems, at no less than `MIN_EXPOSURE`, so TRAPPIST-1's planets were lit
+ * from the direction of the Sun, forty light-years away, night sides included. The Sun's
+ * real flux there is of order 1e-10 W/m^2. Switching it off is the accurate choice, not a
+ * stylistic one.
+ *
+ * The readout follows the same decision. It used to report the nearest Solar System body's
+ * insolation wherever the camera was, which at TRAPPIST-1 g read 0.156 W/m^2 for a planet
+ * that receives about 340.
+ */
+export function planLighting(distanceFromSunM: number, host: LitWorld | null): LightingPlan {
+  if (host) {
+    const measured = Number.isFinite(host.luminositySun) && host.luminositySun > 0;
+    const insolation = measured
+      ? insolationWattsPerM2(host.distanceFromStarM, host.luminositySun)
+      : NaN;
+    return {
+      sunEnabled: false,
+      sunIntensity: 0,
+      // An unmeasured host is exposed as if Sun-like. Exposure is a viewing transform, so it
+      // may assume; the readout is a physical claim, so it says "unknown" instead.
+      hostIntensity: adaptedExposure(host.distanceFromStarM, measured ? host.luminositySun : 1),
+      insolationWm2: insolation,
+      versusFullMoon: insolation / FULL_MOON_W_M2,
+      source: "host",
+    };
+  }
+
+  const insolation = insolationWattsPerM2(distanceFromSunM);
+  return {
+    sunEnabled: true,
+    sunIntensity: adaptedExposure(distanceFromSunM),
+    hostIntensity: 0,
+    insolationWm2: insolation,
+    versusFullMoon: insolation / FULL_MOON_W_M2,
+    source: "sun",
+  };
+}

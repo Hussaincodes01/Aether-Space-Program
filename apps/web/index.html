@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Aether — Multi-Scale Precision Spike</title>
+    <!-- Inline, so the browser does not request /favicon.ico and log a 404 on every load. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%235ea8ff'/%3E%3C/svg%3E"
+    />
     <style>
       :root {
         color-scheme: dark;
@@ -142,13 +147,19 @@
         Visual only. `pointer-events: none` is load-bearing: the overlay covers the canvas,
         so without it the overlay intercepts the very click that is meant to dismiss it and
         the prompt can never be satisfied. Clicks fall through to the canvas beneath.
+
+        The prompt sits just above the help line rather than in the middle of the screen.
+        Every arrival points the camera at its destination, so a centred prompt covered the
+        star or planet the user had just travelled to. The veil is light for the same
+        reason: at 55% black the first view of Earth was under half as bright as it renders.
       */
       #click-to-start {
         position: fixed;
         inset: 0;
         display: grid;
-        place-items: center;
-        background: rgba(0, 0, 0, 0.55);
+        place-items: end center;
+        padding-bottom: 84px;
+        background: rgba(0, 0, 0, 0.25);
         z-index: 10;
         pointer-events: none;
       }

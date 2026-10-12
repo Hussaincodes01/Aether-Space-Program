@@ -31,6 +31,7 @@ import {
   starColour,
   type StarCatalog,
 } from "@aether/stars";
+import { DISCARD_OFFSCREEN_POINT } from "./point-sprite.js";
 
 import brightUrl from "@aether/stars/data/stars-bright.bin?url";
 import fullUrl from "@aether/stars/data/stars-full.bin?url";
@@ -139,6 +140,7 @@ function createMaterial(): THREE.ShaderMaterial {
         // magnitude.
         gl_PointSize = size;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        ${DISCARD_OFFSCREEN_POINT}
         #include <logdepthbuf_vertex>
       }
     `,

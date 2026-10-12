@@ -224,7 +224,7 @@ Carried forward deliberately. A plan that omits these is not a plan.
 | G1  | **`depth.ts` has zero consumers.** Cascaded frusta / reversed-Z is written and exported; the client still runs Three's per-vertex log depth buffer, which interpolates incorrectly across large triangles.                                               | **High** — this is the stated P0 in `main.ts:100` | `grep` finds it referenced only by its own package `index.ts` |
 | G2  | ~~**No LLM composer exists.**~~ **RETIRED, see §13.1.** `aether-harness` implements it in 4,352 lines of Python: 76 checks green, and its determinism verified here against its own shipped ledger, bit-for-bit. Still unwired to the TypeScript client. | ~~High~~ **Closed**                               | 76/76 tests; hashes reproduce the demo ledger                 |
 | G3  | **Motion is frozen** (`FROZEN = true`). Positions are real; nothing rotates or revolves.                                                                                                                                                                 | Medium — deliberate, user-requested               | `main.ts`                                                     |
-| G4  | **No browser-level verification.** Playwright is not installed; all UI evidence is jsdom assertions plus a clean build.                                                                                                                                  | Medium                                            | no `playwright` in any `package.json`                         |
+| G4  | ~~**No browser-level verification.**~~ **Partly closed.** `pnpm test:browser` runs in CI: launch, then arrival at TRAPPIST-1. Its first run failed on four defects and found a fifth, a GPU crash. No surface descent or provenance panel yet.           | ~~Medium~~ **Low**                                | `apps/web/e2e/smoke.mjs`                                      |
 | G5  | **Terrain is never scored against ground truth.** Tests assert _which operators_ fire on Mars, not whether the output resembles Mars. The calibration harness was planned and never built.                                                               | Medium                                            | no scoring code in `packages/terrain`                         |
 | G6  | Catalogue seed covers 3 systems (Sol, Proxima Centauri, TRAPPIST-1); the other 4,719 come from the binary catalogue without the full typed-provenance path.                                                                                              | Low                                               | `packages/catalog/src/seed/`                                  |
 
@@ -340,7 +340,7 @@ they are not re-raised.
 - [x] Typed error classes; user-facing error panel
 - [x] Graceful WebGL-unsupported message
 - [x] Deterministic seeds
-- [ ] Browser-level smoke test in CI (Stage 4)
+- [x] Browser-level smoke test in CI (Stage 4) — launch and interstellar arrival; descent not yet scripted
 
 **Ops**
 

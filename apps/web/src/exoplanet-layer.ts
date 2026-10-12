@@ -28,6 +28,7 @@ import {
   type PlanetCatalog,
   type SystemCatalog,
 } from "@aether/exoplanets";
+import { DISCARD_OFFSCREEN_POINT } from "./point-sprite.js";
 
 import systemsUrl from "@aether/exoplanets/data/systems.bin?url";
 import planetsUrl from "@aether/exoplanets/data/planets.bin?url";
@@ -103,6 +104,7 @@ function createMaterial(): THREE.ShaderMaterial {
         vColour = color;
         gl_PointSize = size;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        ${DISCARD_OFFSCREEN_POINT}
         #include <logdepthbuf_vertex>
       }
     `,
